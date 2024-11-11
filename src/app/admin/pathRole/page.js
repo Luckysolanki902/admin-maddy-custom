@@ -242,6 +242,7 @@ export default function AccessControlPage() {
             <label>
               <input
                 type="checkbox"
+                style={{marginRight:'5px'}}
                 checked={newPath.rolesAllowed.includes("admin")}
                 onChange={() =>
                   setNewPath({
@@ -257,6 +258,7 @@ export default function AccessControlPage() {
             <label>
               <input
                 type="checkbox"
+                style={{marginRight:'5px'}}
                 checked={newPath.rolesAllowed.includes("developer")}
                 onChange={() =>
                   setNewPath({
@@ -272,6 +274,7 @@ export default function AccessControlPage() {
             <label>
               <input
                 type="checkbox"
+                style={{marginRight:'5px'}}
                 checked={newPath.rolesAllowed.includes("marketing")}
                 onChange={() =>
                   setNewPath({
@@ -287,6 +290,7 @@ export default function AccessControlPage() {
             <label>
               <input
                 type="checkbox"
+                style={{marginRight:'5px'}}
                 checked={newPath.rolesAllowed.includes("designer")}
                 onChange={() =>
                   setNewPath({
@@ -302,6 +306,7 @@ export default function AccessControlPage() {
             <label>
               <input
                 type="checkbox"
+                style={{marginRight:'5px'}}
                 checked={newPath.rolesAllowed.includes("production")}
                 onChange={() =>
                   setNewPath({
@@ -353,12 +358,13 @@ export default function AccessControlPage() {
       {/* Update Roles Modal */}
       {updateRolesForm.pathname && (
         <div className={styles.modal}>
-          <h3>Update Roles for {updateRolesForm.pathname}</h3>
+          <h3 style={{marginBottom:'10px',fontSize:'20px'}}>Update Roles for {updateRolesForm.pathname}</h3>
           <div className={styles.roleCheckboxes}>
             {["admin", "developer", "marketing", "designer","production"].map((role) => (
               <label key={role}>
                 <input
                   type="checkbox"
+                  style={{marginRight:'5px'}}
                   checked={updateRolesForm.rolesAllowed.includes(role)}
                   onChange={() => handleRoleChange(role)}
                 />

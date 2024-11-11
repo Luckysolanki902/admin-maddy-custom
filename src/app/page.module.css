@@ -206,10 +206,11 @@ a.secondary {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(2,1fr);
   gap: 20px;
   width: 80%;
   max-width: 800px;
+  margin:10px
 }
 
 .box {

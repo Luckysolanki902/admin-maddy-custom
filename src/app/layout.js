@@ -25,7 +25,18 @@ export default function RootLayout({ children }) {
         <body>
           <header>
             <SignedOut>
-              <SignInButton />
+              <SignInButton >
+                <button  style={{
+          backgroundColor: '#007bff',  // Vibrant blue background
+          color: 'white',               // White text
+          padding: '12px 20px',         // Button padding
+          borderRadius: '4px',          // Rounded corners
+          fontSize: '16px',             // Font size
+          border: 'none',               // Remove default border
+          cursor: 'pointer',
+          margin:'10px'           // Pointer cursor on hover
+        }}>SignIn</button>
+              </SignInButton>
             </SignedOut>
             <SignedIn>
               <UserButton />
