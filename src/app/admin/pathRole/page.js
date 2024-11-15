@@ -146,7 +146,7 @@ export default function AccessControlPage() {
   useEffect(() => {
     // Fetch all paths on load
     async function fetchPaths() {
-      const res = await fetch("/api/paths");
+      const res = await fetch("/api/authentication/paths");
       const data = await res.json();
       setPaths(data);
     }
@@ -177,7 +177,7 @@ export default function AccessControlPage() {
   const handleUpdateRoles = async () => {
     setIsLoading(true);
 
-    await fetch("/api/paths/update", {
+    await fetch("/api/authentication/paths/update", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
