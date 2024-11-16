@@ -1,6 +1,6 @@
 // app/api/paths/add/route.js
 import { connectToDatabase } from "@/lib/db";
-import AccessControl from "@/models/routeSchema";
+import AccessControl from "@/models/AccessControl";
 
 export async function POST(request) {
   await connectToDatabase();
