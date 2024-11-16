@@ -29,10 +29,10 @@ export default function Home() {
       <p className={styles.subheading}>life is too short to hate it</p>
 
       <div className={styles.grid}>
-        <Link href="/admin/market" className={styles.box}>Marketing Department</Link>
-        <Link href="/admin/design" className={styles.box}>Design Department</Link>
-        <Link href="/admin/dev" className={styles.box}>Web-Dev Department</Link>
-        <Link href="/admin/production" className={styles.box}>Production Department</Link>
+        <Link href="/admin/market" className={styles.box}>Marketing</Link>
+        <Link href="/admin/design" className={styles.box} style={{'box-shadow': '0px 0px 11.34px #00FFE5'}}>Design </Link>
+        <Link href="/admin/dev" className={styles.box} style={{'box-shadow': '0px 0px 11.34px #FF5990'}}>Web-Dev</Link>
+        <Link href="/admin/production" className={styles.box} style={{'box-shadow': '0px 0px 11.34px #FFFFFF'}}>Production</Link>
       </div>
 
       {masterAdminVisible && (

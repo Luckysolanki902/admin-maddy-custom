@@ -158,7 +158,7 @@ export default function AccessControlPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    const res = await fetch("/api/paths/add", {
+    const res = await fetch("/api/authentication/paths/add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -201,7 +201,7 @@ export default function AccessControlPage() {
   const handleDeletePath = async (pathname) => {
     setIsLoading(true);
 
-    await fetch("/api/paths/delete", {
+    await fetch("/api/authentication/paths/delete", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pathname }),
