@@ -25,7 +25,7 @@ export const uploadToS3 = async (file, fullPath, fileType = 'image/jpeg') => {
       client: s3,
       params: {
         Bucket: AWS_S3_Bucket,
-        Key: fullPath,
+        Key: fullPath.startsWith('/') ? fullPath.slice(1) : fullPath,
         Body: file,
         ContentType: fileType,
       },

@@ -1,7 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, Chip, TextField, Button, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Snackbar, Typography } from '@mui/material';
+import {
+  Box,
+  Chip,
+  TextField,
+  Button,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Snackbar,
+  Typography,
+  FormControlLabel,
+  Checkbox,
+} from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadToS3 } from '@/lib/aws';
 
@@ -9,7 +24,11 @@ const HappyCustomersPage = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [displayOrder, setDisplayOrder] = useState({});
-  const [globalOptions, setGlobalOptions] = useState({ isGlobal: false, globalDisplayOrder: 0 });
+  const [globalOptions, setGlobalOptions] = useState({
+    isGlobal: false,
+    globalDisplayOrder: 0,
+    showOnHomepage: false,
+  });
   const [name, setName] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -62,6 +81,7 @@ const HappyCustomersPage = () => {
         photo: photoUrl,
         isGlobal: globalOptions.isGlobal,
         globalDisplayOrder: globalOptions.globalDisplayOrder,
+        showOnHomepage: globalOptions.showOnHomepage,
         placements: selectedCategories.map((categoryId) => ({
           refType: 'SpecificCategory',
           refId: categoryId,
@@ -81,7 +101,7 @@ const HappyCustomersPage = () => {
         setPhotoFile(null);
         setSelectedCategories([]);
         setDisplayOrder({});
-        setGlobalOptions({ isGlobal: false, globalDisplayOrder: 0 });
+        setGlobalOptions({ isGlobal: false, globalDisplayOrder: 0, showOnHomepage: false });
       } else {
         alert('Error adding happy customer');
       }
@@ -94,7 +114,7 @@ const HappyCustomersPage = () => {
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
-      'image/jpeg': ['.jpg'] // Only allow .jpg files
+      'image/jpeg': ['.jpg'], // Only allow .jpg files
     },
     maxFiles: 1,
     onDrop: (acceptedFiles) => {
@@ -105,7 +125,6 @@ const HappyCustomersPage = () => {
       }
     },
   });
-  
 
   return (
     <Box p={4}>
@@ -162,6 +181,27 @@ const HappyCustomersPage = () => {
           })}
         </TableBody>
       </Table>
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={globalOptions.isGlobal}
+            onChange={(e) => setGlobalOptions({ ...globalOptions, isGlobal: e.target.checked })}
+          />
+        }
+        label="Show on every page"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={globalOptions.showOnHomepage}
+            onChange={(e) => setGlobalOptions({ ...globalOptions, showOnHomepage: e.target.checked })}
+          />
+        }
+        label="Show on Homepage"
+        sx={{ mt: 2 }}
+      />
 
       <TextField
         label="Global Display Order"
