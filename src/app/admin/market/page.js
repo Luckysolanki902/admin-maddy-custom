@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import styles from '../Department.module.css';
 
 export default function Marketing() {
@@ -7,8 +8,8 @@ export default function Marketing() {
       <p className={styles.subtitle}>Simple, To the point, Bold</p>
       
       <div className={styles.buttonContainer}>
-        <button className={`${styles.actionButton} ${styles.marketingButton}`}>Track sales</button>
-        <button className={`${styles.actionButton} ${styles.marketingButton}`}>Manage coupons</button>
+        <Link href="" className={`${styles.actionButton} ${styles.marketingButton}`}>Track sales</Link>
+        <Link  href="" className={`${styles.actionButton} ${styles.marketingButton}`}>Manage coupons</Link>
         <p className={styles.comingSoon}>More coming soon...</p>
       </div>
     </div>

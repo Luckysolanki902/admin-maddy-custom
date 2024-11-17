@@ -1,3 +1,5 @@
+"use client"
+import { useEffect } from 'react';
 import styles from '../Department.module.css';
 import Link from 'next/link';
 export default function Marketing() {
@@ -7,14 +9,8 @@ export default function Marketing() {
       <p className={styles.subtitle}>Simple, To the point, Bold</p>
       
       <div className={styles.buttonContainer}>
-      <Link href={'/admin/manage/orders/orderList'}>
-  <button className={`${styles.actionButton} ${styles.webdButton}`}>
-    Order List
-  </button>
-</Link>
-
-        <button className={`${styles.actionButton} ${styles.webdButton}`}>Edit Stickers</button>
-        <button className={`${styles.actionButton} ${styles.webdButton}`}>Add Collection</button>
+        <Link href="" className={`${styles.actionButton} ${styles.webdButton}`}>Edit Stickers</Link>
+        <Link href="" className={`${styles.actionButton} ${styles.webdButton}`}>Add Collection</Link>
         <p className={styles.comingSoon}>More coming soon...</p>
       </div>
     </div>

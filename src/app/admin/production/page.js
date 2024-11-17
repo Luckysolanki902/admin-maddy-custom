@@ -1,5 +1,5 @@
 import styles from '../Department.module.css';
-
+import Link from 'next/link';
 export default function Marketing() {
   return (
     <div className={`${styles.container} ${styles.marketing}`}>
@@ -7,9 +7,9 @@ export default function Marketing() {
       <p className={styles.subtitle}>if you cant describe what you are doing , you are not doing that</p>
       
       <div className={styles.buttonContainer}>
-        <button className={`${styles.actionButton} ${styles.productionButton}`}>Download Templates</button>
-        <button className={`${styles.actionButton} ${styles.productionButton}`}>Customer List</button>
-        <button className={`${styles.actionButton} ${styles.productionButton}`}>Add Collection</button>
+        <Link href="" className={`${styles.actionButton} ${styles.productionButton}`}>Download Templates</Link>
+        <Link href="" className={`${styles.actionButton} ${styles.productionButton}`}>Customer List</Link>
+        <Link href="" className={`${styles.actionButton} ${styles.productionButton}`}>Add Collection</Link>
         <p className={styles.comingSoon}>More coming soon...</p>
       </div>
     </div>
