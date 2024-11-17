@@ -1,30 +1,40 @@
-import mongoose from "mongoose";
+// @/lib/middleware/connectToDb
+import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error("Please add your MongoDB URI to .env.local");
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
 }
 
-let isConnected = false; // track the connection
+let cached = global.mongoose;
 
-export const connectToDatabase = async () => {
-  if (isConnected) {
-    // Use existing database connection
-    return;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+export async function connectToDatabase() {
+  if (cached.conn) {
+    return cached.conn;
   }
 
-  try {
-    // Create new connection if not already connected
-    const db = await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      // Ensure all models are initialized to avoid OverwriteModelError
+      mongoose.connection.on('connected', () => {
+      });
+      mongoose.connection.on('error', (err) => {
+        console.error("Database connection error:", err);
+      });
+      return mongoose;
     });
-
-    isConnected = db.connections[0].readyState === 1;
-    console.log("Connected to MongoDB");
-  } catch (error) {
-    console.error("Error connecting to MongoDB", error);
-    throw new Error("Failed to connect to MongoDB");
   }
-};
+
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
+

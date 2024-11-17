@@ -17,6 +17,22 @@ import {
   FormControlLabel,
   Checkbox,
 } from '@mui/material';
+import {
+  Box,
+  Chip,
+  TextField,
+  Button,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Snackbar,
+  Typography,
+  FormControlLabel,
+  Checkbox,
+} from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadToS3 } from '@/lib/aws';
 
@@ -116,6 +132,7 @@ const HappyCustomersPage = () => {
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
       'image/jpeg': ['.jpg'], // Only allow .jpg files
+      'image/jpeg': ['.jpg'], // Only allow .jpg files
     },
     maxFiles: 1,
     onDrop: (acceptedFiles) => {
@@ -193,6 +210,27 @@ const HappyCustomersPage = () => {
           })}
         </TableBody>
       </Table>
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={globalOptions.isGlobal}
+            onChange={(e) => setGlobalOptions({ ...globalOptions, isGlobal: e.target.checked })}
+          />
+        }
+        label="Show on every page"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={globalOptions.showOnHomepage}
+            onChange={(e) => setGlobalOptions({ ...globalOptions, showOnHomepage: e.target.checked })}
+          />
+        }
+        label="Show on Homepage"
+        sx={{ mt: 2 }}
+      />
 
       <TextField
         label="Global Display Order"

@@ -5,7 +5,7 @@ const AccessControlSchema = new mongoose.Schema({
   pathname: {
     type: String,
     required: true,
-    unique: true, // Ensure each pathname is unique
+    unique: true,
   },
   rolesAllowed: {
     type: [String],
