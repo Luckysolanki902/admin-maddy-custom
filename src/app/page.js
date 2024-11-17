@@ -27,12 +27,11 @@ export default function Home() {
         <span onClick={handleHeadingClick} className={styles.work}>work</span>
       </h1>
       <p className={styles.subheading}>life is too short to hate it</p>
-
       <div className={styles.grid}>
-        <Link href="/admin/market" className={styles.box}>Marketing Department</Link>
-        <Link href="/admin/design" className={styles.box}>Design Department</Link>
-        <Link href="/admin/dev" className={styles.box}>Web-Dev Department</Link>
-        <Link href="/admin/production" className={styles.box}>Production Department</Link>
+        <Link href="/admin/market" className={styles.box}  style={{'boxShadow': '0px 0px 11.34px rgba(255, 255, 0, 0.6)'}}>Marketing</Link>
+        <Link href="/admin/design" className={styles.box} style={{'boxShadow': '0px 0px 11.34px rgba(0,255,229,0.6)'}}>Design </Link>
+        <Link href="/admin/dev" className={styles.box} style={{'boxShadow': '0px 0px 11.34px rgba(255,89,144,0.6)'}}>Web-Dev</Link>
+        <Link href="/admin/production" className={styles.box} style={{'boxShadow': '0px 0px 11.34px rgba(255,255,255,0.6)'}}>Production</Link>
       </div>
 
       {masterAdminVisible && (

@@ -6,27 +6,38 @@ export async function GET(request) {
 
   // Extract the pathname and role from the query string
   const { searchParams } = new URL(request.url);
-  const pathname = searchParams.get('pathname');
-  const userRole = searchParams.get('role');
+  const pathname = searchParams.get("pathname");
+  const userRole = searchParams.get("role");
 
   try {
-    // Find the path in the database
-    const pathData = await AccessControl.findOne({ pathname });
-    
-    if (!pathData) {
-      // If the path is not found, return a 404 response
-      return new Response(JSON.stringify({ allowed: false, message: "Path not found" }), { status: 404 });
+    // Find all paths that match the current pathname, including wildcard paths
+    const pathData = await AccessControl.find({
+      $or: [
+        { pathname }, // Exact match
+        { pathname: { $regex: "^" + pathname.replace(/\/$/, "") + "/.*" } }, // Wildcard match
+        { pathname: { $regex: `^${pathname.split("/")[1]}/*` } }, // Match if starts with pattern
+      ],
+    });
+
+    if (!pathData.length) {
+      // If no matching path is found, return a 404 response
+      return new Response(JSON.stringify({ allowed: false, message: "Path not found" }), {
+        status: 404,
+      });
     }
 
-    // Check if the user's role is allowed for this path
-    const allowedRoles = pathData.rolesAllowed || [];
-    if (allowedRoles.includes(userRole)) {
+    // Check if the user's role is allowed for any matched path
+    const isAllowed = pathData.some((path) => (path.rolesAllowed || []).includes(userRole));
+
+    if (isAllowed) {
       return new Response(JSON.stringify({ allowed: true }), { status: 200 });
     } else {
-      return new Response(JSON.stringify({ allowed: false, message: "Access denied" }), { status: 403 });
+      return new Response(JSON.stringify({ allowed: false, message: "Access denied" }), {
+        status: 403,
+      });
     }
   } catch (error) {
-    // Handle any unexpected errors
+    // Handle unexpected errors
     return new Response("Failed to check access", { status: 500 });
   }
 }

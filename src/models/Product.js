@@ -9,6 +9,12 @@ const ProductSchema = new mongoose.Schema(
       maxlength: 200,
       index: true,
     },
+    captions: [
+      {
+        type: String,
+        maxlength: 200,
+      },
+    ],
     images: [
       {
         type: String,
@@ -19,11 +25,16 @@ const ProductSchema = new mongoose.Schema(
       required: true,
       maxlength: 200,
     },
-    // description: {
-    //   type: String,
-    //   maxlength: 2000,
-    // },
+    description: {
+      type: String,
+      maxlength: 2000,
+    },
     mainTags: [
+      {
+        type: String,
+      },
+    ],
+    searchKeywords: [
       {
         type: String,
       },
@@ -128,7 +139,19 @@ const ProductSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-
+    dominantColor: {
+      colorName: {
+        type: String,
+        index: true,
+      },
+      colorFamily: {
+        type: String,
+        index: true,
+      },
+      dominantColor: {
+        type: String,
+      },
+    },
   },
   { timestamps: true }
 );

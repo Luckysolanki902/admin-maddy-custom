@@ -1,5 +1,3 @@
-// models/Order.js
-
 const mongoose = require('mongoose');
 
 const OrderSchema = new mongoose.Schema(
@@ -21,14 +19,6 @@ const OrderSchema = new mongoose.Schema(
           required: true,
           index: true,
         },
-        name:{
-          type: String,
-          required: true
-        },
-        sku: {
-          type: String,
-          required: true,
-        },
         // Quantity of the product
         quantity: {
           type: Number,
@@ -42,39 +32,32 @@ const OrderSchema = new mongoose.Schema(
           required: true,
           min: 0,
         },
-      },
-    ],
-    // Total order amount to be paid after discount and before extra charges
-    totalAmount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    // Extra charges at the order level, like payment charges
-    extraCharges: [
-      {
-        chargesName: {
-          type: String,
-        },
-        chargesAmount: {
+        // Discount applied
+        discount: {
           type: Number,
           min: 0,
           default: 0,
         },
+        // Extra charges, if any
+        extraCharges: [
+          {
+            chargesName: {
+              type: String,
+            },
+            chargesAmount: {
+              type: Number,
+              min: 0,
+              default: 0,
+            },
+          },
+        ],
       },
     ],
-    // Coupon applied to this order
-    couponsApplied: {
-      couponCode: {
-        type: String,
-        uppercase: true,
-        maxlength: 20,
-      },
-      discountAmount: {
-        type: Number,
-        min: 0,
-        default: 0,
-      },
+    // Total order amount
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
     },
     // Payment details
     paymentDetails: {
@@ -91,22 +74,8 @@ const OrderSchema = new mongoose.Schema(
         min: 0,
         default: 0,
       },
-      // Amount due online
-      amountDueOnline: {
-        type: Number,
-        required: true,
-        min: 0,
-        default: 0,
-      },
       // Amount due via COD
       amountDueCod: {
-        type: Number,
-        required: true,
-        min: 0,
-        default: 0,
-      },
-      // Amount paid via COD
-      amountPaidCod: {
         type: Number,
         required: true,
         min: 0,
@@ -161,24 +130,32 @@ const OrderSchema = new mongoose.Schema(
         maxlength: 10,
       },
     },
-    // Current status of the payment and order
-    paymentStatus: {
+    // Current status of the order
+    status: {
       type: String,
       required: true,
-      enum: ['pending', 'failed', 'paidPartially', 'allPaid', 'allToBePaidCod'],
+      enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled'],
       default: 'pending',
       index: true, // Index for efficient querying
     },
-    deliveryStatus: {
-      type: String,
-      required: true,
-      enum: ['pending', 'orderCreated', 'processing', 'shipped', 'delivered', 'cancelled'],
-      default: 'pending',
-      index: true, // Index for efficient querying
+    // Purchase verification statuses
+    purchaseStatus: {
+      paymentVerified: {
+        type: Boolean,
+        default: false,
+      },
+      shiprocketOrderCreated: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    // Coupon applied to this order
+    couponApplied: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coupon',
     },
   },
   { timestamps: true }
 );
-
 
 module.exports = mongoose.models.Order || mongoose.model('Order', OrderSchema);
