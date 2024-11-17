@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 const PlacementSchema = new mongoose.Schema({
   refType: {
     type: String,
@@ -47,8 +46,13 @@ const HappyCustomerSchema = new mongoose.Schema(
       default: true,
       index: true,
     },
+    showOnHomepage: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.models.HappyCustomer || mongoose.model('HappyCustomer', HappyCustomerSchema);
+module.exports =
+  mongoose.models.HappyCustomer || mongoose.model('HappyCustomer', HappyCustomerSchema);
