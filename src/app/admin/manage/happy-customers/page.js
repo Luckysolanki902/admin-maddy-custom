@@ -1,7 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, Chip, TextField, Button, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Snackbar, Typography } from '@mui/material';
+import {
+  Box,
+  Chip,
+  TextField,
+  Button,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Snackbar,
+  Typography,
+  FormControlLabel,
+  Checkbox,
+} from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadToS3 } from '@/lib/aws';
 
@@ -9,9 +24,13 @@ const HappyCustomersPage = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [displayOrder, setDisplayOrder] = useState({});
-  const [globalOptions, setGlobalOptions] = useState({ isGlobal: false, globalDisplayOrder: 0 });
+  const [globalOptions, setGlobalOptions] = useState({
+    isGlobal: false,
+    globalDisplayOrder: 0,
+  });
   const [name, setName] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
+  const [showOnHomepage, setShowOnHomepage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successAlert, setSuccessAlert] = useState(false);
 
@@ -62,6 +81,7 @@ const HappyCustomersPage = () => {
         photo: photoUrl,
         isGlobal: globalOptions.isGlobal,
         globalDisplayOrder: globalOptions.globalDisplayOrder,
+        showOnHomepage,
         placements: selectedCategories.map((categoryId) => ({
           refType: 'SpecificCategory',
           refId: categoryId,
@@ -82,6 +102,7 @@ const HappyCustomersPage = () => {
         setSelectedCategories([]);
         setDisplayOrder({});
         setGlobalOptions({ isGlobal: false, globalDisplayOrder: 0 });
+        setShowOnHomepage(false);
       } else {
         alert('Error adding happy customer');
       }
@@ -94,7 +115,7 @@ const HappyCustomersPage = () => {
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
-      'image/jpeg': ['.jpg'] // Only allow .jpg files
+      'image/jpeg': ['.jpg'], // Only allow .jpg files
     },
     maxFiles: 1,
     onDrop: (acceptedFiles) => {
@@ -105,11 +126,12 @@ const HappyCustomersPage = () => {
       }
     },
   });
-  
 
   return (
     <Box p={4}>
-      <Typography variant="h3" gutterBottom>Manage Happy Customers</Typography>
+      <Typography variant="h3" gutterBottom>
+        Manage Happy Customers
+      </Typography>
 
       <TextField
         label="Customer Name"
@@ -120,7 +142,16 @@ const HappyCustomersPage = () => {
         required
       />
 
-      <Box {...getRootProps()} sx={{ mb: 4, border: '1px dashed gray', p: 2, textAlign: 'center', cursor: 'pointer' }}>
+      <Box
+        {...getRootProps()}
+        sx={{
+          mb: 4,
+          border: '1px dashed gray',
+          p: 2,
+          textAlign: 'center',
+          cursor: 'pointer',
+        }}
+      >
         <input {...getInputProps()} />
         {!photoFile ? <p>Drag & drop a photo here, or click to select</p> : <p>{photoFile.name}</p>}
       </Box>
@@ -167,10 +198,35 @@ const HappyCustomersPage = () => {
         label="Global Display Order"
         type="number"
         value={globalOptions.globalDisplayOrder}
-        onChange={(e) => setGlobalOptions({ ...globalOptions, globalDisplayOrder: e.target.value })}
+        onChange={(e) =>
+          setGlobalOptions({ ...globalOptions, globalDisplayOrder: e.target.value })
+        }
         fullWidth
         sx={{ mt: 4 }}
       />
+
+      <Box mt={4} display="flex" alignItems="center" gap={2}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={globalOptions.isGlobal}
+              onChange={(e) =>
+                setGlobalOptions({ ...globalOptions, isGlobal: e.target.checked })
+              }
+            />
+          }
+          label="Is Global"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={showOnHomepage}
+              onChange={(e) => setShowOnHomepage(e.target.checked)}
+            />
+          }
+          label="Show on Homepage"
+        />
+      </Box>
 
       <Button
         onClick={handleFormSubmit}
