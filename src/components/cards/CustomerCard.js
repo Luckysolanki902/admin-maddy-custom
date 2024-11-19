@@ -21,11 +21,11 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'left', display: 'flex', gap: '2rem' }}>
                         {/* Display the User's name by populating */}
-                        <div>{order.user?.name}</div>
+                        <div>{order.address?.receiverName}</div>
                     </div>
                     {/* Display payment status */}
                     <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '0.5rem' }}>
-                        Contact no: {order.user?.phoneNumber }
+                        Contact no: {order.address?.receiverPhoneNumber}
                     </div>
                 </div>
             </AccordionSummary>
@@ -41,10 +41,21 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
                         }}>
                             <TimelineItem>
                                 <TimelineSeparator>
-                                    <TimelineDot color={order.purchaseStatus?.paymentVerified ? 'success' : 'grey'} />
+                                    <TimelineDot color="grey" />
+                                    <TimelineConnector />
                                 </TimelineSeparator>
                                 <TimelineContent>
-                                    <Typography>Payment Successfull: {order.purchaseStatus?.paymentVerified ? 'Yes' : 'No'}</Typography>
+                                    <Typography>Payment Status: {order.paymentStatus}</Typography>
+                                </TimelineContent>
+                            </TimelineItem>
+
+                            {/* Delivery Status */}
+                            <TimelineItem>
+                                <TimelineSeparator>
+                                    <TimelineDot color="grey" />
+                                </TimelineSeparator>
+                                <TimelineContent>
+                                    <Typography>Delivery Status: {order.deliveryStatus}</Typography>
                                 </TimelineContent>
                             </TimelineItem>
                         </Timeline>
@@ -68,17 +79,17 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
                         {item.product?.images && (
                             <Image src={`${baseImageUrl}${item.product.images}`} width={1076 / 4} height={683 / 4} alt='Image' />
                         )}
-                        <div>
+                        <div style={{margin:'5px'}}>
                             <strong>Price at Purchase:</strong> {item.priceAtPurchase}
                         </div>
                         {item.discount > 0 && (
-                            <div>
+                            <div style={{margin:'5px'}}>
                                 <strong>Discount:</strong> {item.discount}
                             </div>
                         )}
-                        <div> 
+                        <div  style={{margin:'5px'}}> 
                             <strong>Extra Charges</strong>
-                            {item.extraCharges.map((ele) => {
+                            {item.extraCharges && item.extraCharges.map((ele) => {
                             console.log(ele); // Log to console
                             return (
                                     <li key={ele.chargesName}><strong style={{marginRight:'10px'}}>{ele.chargesName}:</strong>{ele.chargesAmount}</li> // Render HTML tags
