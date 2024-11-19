@@ -31,7 +31,7 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
             </AccordionSummary>
             <AccordionDetails style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '10px' }}>
                 {/* Payment and shipping status */}
-                {order.status && (
+                
                     <div style={{ margin: 0, padding: 0, textAlign: 'left' }}>
                         <Timeline sx={{
                             [`& .${timelineItemClasses.root}:before`]: {
@@ -60,7 +60,7 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
                             </TimelineItem>
                         </Timeline>
                     </div>
-                )}
+                
 
                 {/* Loop through the items in the order */}
                 {order.items.map((item, index) => (
