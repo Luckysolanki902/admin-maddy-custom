@@ -254,7 +254,7 @@ const AddProductPage = () => {
       // Construct Design Template Object
       const designTemplateObj = {
         designCode: sku,
-        imageUrl: `${process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL}/${uploadedDesignTemplatePath}`,
+        imageUrl: `${uploadedDesignTemplatePath}`,
       };
       console.log('Design Template Object:', designTemplateObj); // Debugging line
 
@@ -271,7 +271,7 @@ const AddProductPage = () => {
         ...hiddenFields, // Add hidden fields directly
         sku,
         designTemplate: designTemplateObj,
-        images: [`${process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL}/${uploadedProductImagePath}`],
+        images: [`${uploadedProductImagePath}`],
       };
       console.log('Product Data to Send:', productData); // Debugging line
 
