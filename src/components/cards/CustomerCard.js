@@ -9,6 +9,7 @@ import TimelineContent from '@mui/lab/TimelineContent';
 import TimelineDot from '@mui/lab/TimelineDot';
 
 const CustomerCard = ({ order, expanded, handleChange }) => {
+    const baseImageUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL;
     return (
         <Accordion
             key={order._id}
@@ -63,8 +64,9 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
                         </AccordionSummary>
                         {/* Display item image */}
                         <AccordionDetails >
-                        {item.product?.image && (
-                            <Image src={item.product.image} width={1076 / 4} height={683 / 4} alt='Image' />
+                        {console.log(`${baseImageUrl}${item.product.images}`)}
+                        {item.product?.images && (
+                            <Image src={`${baseImageUrl}${item.product.images}`} width={1076 / 4} height={683 / 4} alt='Image' />
                         )}
                         <div>
                             <strong>Price at Purchase:</strong> {item.priceAtPurchase}
