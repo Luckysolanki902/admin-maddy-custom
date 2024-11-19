@@ -1,7 +1,7 @@
 // /app/api/get-main/get-sku-count/route.js
 
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/middleware/connectToDb';
+import { connectToDatabase } from '@/lib/db';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
 import dayjs from 'dayjs';
