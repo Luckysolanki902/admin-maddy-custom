@@ -1,7 +1,7 @@
 // /app/api/download/download-raw-designs/route.js
 
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/middleware/connectToDb';
+import { connectToDatabase } from '@/lib/db';
 import Product from '@/models/Product';
 import archiver from 'archiver';
 import pLimit from 'p-limit';

@@ -19,6 +19,8 @@ import {
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadToS3 } from '@/lib/aws';
+import HappyCustomers from '@/components/main-site-ui-comps/sliders/HappyCustomers';
+import AllHappyCustomers from '@/components/main-site-ui-comps/sliders/AllHappyCustomers';
 
 const HappyCustomersPage = () => {
   const [categories, setCategories] = useState([]);
@@ -59,12 +61,12 @@ const HappyCustomersPage = () => {
     if (!photoFile) return null;
 
     const randomPath = Math.random().toString(36).substring(2, 15);
-    const fullPath = `assets/happy-customers/${randomPath}`;
+    const fullPath = `assets/happy-customers/${randomPath}.png`;
 
     try {
       const relativePath = await uploadToS3(photoFile, fullPath, photoFile.type);
       const baseUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL;
-      return `${baseUrl}/${relativePath}`;
+      return `${relativePath}`;
     } catch (error) {
       console.error('Error uploading photo:', error.message);
       throw new Error('Photo upload failed');
@@ -115,7 +117,7 @@ const HappyCustomersPage = () => {
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
-      'image/jpeg': ['.jpg'], // Only allow .jpg files
+      'image/jpeg': ['.png'], // Only allow .jpg files
     },
     maxFiles: 1,
     onDrop: (acceptedFiles) => {
@@ -132,6 +134,9 @@ const HappyCustomersPage = () => {
       <Typography variant="h3" gutterBottom>
         Manage Happy Customers
       </Typography>
+      {/* <HappyCustomers /> */}
+
+
 
       <TextField
         label="Customer Name"
@@ -237,6 +242,7 @@ const HappyCustomersPage = () => {
       >
         {loading ? <CircularProgress size={24} /> : 'Save Happy Customer'}
       </Button>
+      <AllHappyCustomers />
 
       <Snackbar
         open={successAlert}
