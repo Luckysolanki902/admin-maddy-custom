@@ -1,5 +1,6 @@
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from '@clerk/themes'
 import ThemeRegistry from "@/components/layout/ThemeRegistry";
 import AuthHeader from "@/components/layout/AuthHeader";
 
@@ -18,7 +19,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        baseTheme: dark,
+      }}>
       <html lang="en">
         <body>
           <ThemeRegistry>
