@@ -152,7 +152,6 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
             <Typography
               variant="body2"
               sx={{
-                fontWeight: 'bold',
                 color: 'white',
                 fontSize: { xs: '0.9rem', sm: '1rem' },
               }}
@@ -237,8 +236,7 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
                 color: getPaymentModeColor(order.paymentDetails?.mode?.name || 'cod'),
                 fontSize: { xs: '0.8rem', sm: '1rem' },
                 backgroundColor:"#5E5E5E",
-                width:'fit-content',
-                padding:'0.05rem 0.3rem',
+                padding:'0rem 0.3rem',
                 borderRadius:"0.3rem"
               }}
             >
@@ -248,7 +246,8 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
               variant="body1"
               sx={{
                 color: 'white',
-                fontSize: { xs: '1rem', sm: '1.2rem' },
+                fontSize: { xs: '1rem', sm: '1rem' },
+                fontWeight:'300'
               }}
             >
               ₹ {order.totalAmount.toFixed(2)}
@@ -262,7 +261,7 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
           <Box>
             <Typography
               variant="subtitle2"
-              sx={{ fontWeight: 'bold', marginBottom: '4px', color: 'white' }}
+              sx={{  marginBottom: '4px', color: 'white' }}
             >
               Address Details
             </Typography>
@@ -278,7 +277,7 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
           <Box>
             <Typography
               variant="subtitle2"
-              sx={{ fontWeight: 'bold', marginBottom: '4px', color: 'white' }}
+              sx={{  marginBottom: '4px', color: 'white' }}
             >
               Payment Details
             </Typography>
