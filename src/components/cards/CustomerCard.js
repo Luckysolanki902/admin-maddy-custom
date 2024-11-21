@@ -292,20 +292,29 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
               </span>
             </Typography>
             {order.paymentDetails?.mode?.name !== 'online' && (
-              <Box>
-                {order.paymentDetails?.amountDueOnline > 0 && (
-                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
-                    Amount Due Online:
-                    <span style={{ color: 'red' }}> ₹{order.paymentDetails?.amountDueOnline}</span>
-                  </Typography>
-                )}
-                {order.paymentDetails?.amountPaidCod > 0 && (
-                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
-                    Amount Paid COD:
-                    <span style={{ color: '#34C759' }}> ₹{order.paymentDetails?.amountPaidCod}</span>
-                  </Typography>
-                )}
-              </Box>
+               <Box>
+               {order.paymentDetails?.amountDueOnline > 0 && (
+                 <Typography variant="body2">
+                   Amount Due Online:
+                   <span style={{ color: 'red' }}> ₹{order.paymentDetails?.amountDueOnline}</span>
+                 </Typography>
+               )}
+               {order.paymentDetails?.amountPaidCod === 0 && order.paymentDetails?.amountDueCod > 0 && (
+                 <Typography variant="body2">
+                   Amount Due COD:
+                   <span style={{ color: 'rgb(213, 0, 0)' }}> ₹{order.paymentDetails?.amountDueCod}</span>
+                 </Typography>
+               )}
+               {order.paymentDetails?.amountPaidCod > 0 && (
+                 <Typography variant="body2">
+                   Amount Paid COD:
+                   <span style={{ color: '#34C759' }}>
+                      ₹{order.paymentDetails?.amountPaidCod}
+
+                   </span>
+                 </Typography>
+               )}
+             </Box>
             )}
           </Box>
         </Box>

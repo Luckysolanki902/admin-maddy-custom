@@ -37,10 +37,10 @@ const Index = () => {
   const [orders, setOrders] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState(null); // Start with no date filter
-  const [endDate, setEndDate] = useState(null); // End with no date filter
+  const [startDate, setStartDate] = useState(dayjs().startOf('day')); // Default to today's start
+  const [endDate, setEndDate] = useState(dayjs().endOf('day')); // Default to today's end
   const [showLocalHostOrders, setShowLocalHostOrders] = useState(false);
-  const [activeTag, setActiveTag] = useState('all'); // Default to 'all'
+  const [activeTag, setActiveTag] = useState('today'); // Default to 'all'
   const [totalOrders, setTotalOrders] = useState(0);
 
   // Problematic Orders State
