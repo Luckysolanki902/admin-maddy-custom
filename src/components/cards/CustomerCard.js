@@ -1,134 +1,317 @@
-import { Accordion, AccordionDetails, AccordionSummary, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Typography,
+  Box,
+  Popover,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import Image from 'next/image';
-import Timeline from '@mui/lab/Timeline';
-import TimelineItem, { timelineItemClasses } from '@mui/lab/TimelineItem';
-import TimelineSeparator from '@mui/lab/TimelineSeparator';
-import TimelineConnector from '@mui/lab/TimelineConnector';
-import TimelineContent from '@mui/lab/TimelineContent';
-import TimelineDot from '@mui/lab/TimelineDot';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+
+const formatOrderDate = (dateInput) => {
+  const utcDate = new Date(dateInput);
+  const options = {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  };
+  const istFormattedDate = new Intl.DateTimeFormat('en-US', options).format(utcDate);
+
+  const today = new Date(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).format(new Date()));
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const orderDate = new Date(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).format(utcDate));
+
+  if (orderDate.getTime() === today.getTime()) {
+    const timePart = istFormattedDate.match(/\d{1,2}:\d{2} (AM|PM)/)[0];
+    return `Today | ${timePart}`;
+  }
+
+  if (orderDate.getTime() === yesterday.getTime()) {
+    const timePart = istFormattedDate.match(/\d{1,2}:\d{2} (AM|PM)/)[0];
+    return `Yesterday | ${timePart}`;
+  }
+
+  return istFormattedDate.replace(',', ' |');
+};
 
 const CustomerCard = ({ order, expanded, handleChange }) => {
-    const baseImageUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL;
-    return (
-        <Accordion
-            key={order._id}
-            expanded={expanded === order._id}
-            onChange={handleChange(order._id)}
-            style={{ marginBottom: '10px', padding: '0.2rem', width: '100%' }}
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [popoverProducts, setPopoverProducts] = useState([]);
+
+  const handlePopoverOpen = (event) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setPopoverProducts(order.items);
+  };
+
+  const handlePopoverClose = (event) => {
+    event.stopPropagation();
+    setAnchorEl(null);
+    setPopoverProducts([]);
+  };
+
+  const open = Boolean(anchorEl);
+  const id = open ? `popover-${order._id}` : undefined;
+
+  const copyToClipboard = (event) => {
+    event.stopPropagation();
+    navigator.clipboard.writeText(order._id)
+      .then(() => {
+        console.log('Order ID copied to clipboard');
+      })
+      .catch((err) => {
+        console.error('Failed to copy Order ID: ', err);
+      });
+  };
+
+  const getPaymentModeColor = (modeName) => {
+    switch (modeName.toLowerCase()) {
+      case 'online':
+        return '#34C759';
+      case 'cod':
+        return 'blue';
+      default:
+        return 'yellow';
+    }
+  };
+
+  return (
+    <Accordion
+      key={order._id}
+      expanded={expanded === order._id}
+      onChange={handleChange(order._id)}
+      sx={{
+        marginBottom: '10px',
+        width: '100%',
+        backgroundColor: '#2C2C2C',
+        borderRadius: '8px',
+      }}
+    >
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr', // Single column on extra small devices
+              sm: '1fr 1fr', // Two columns on small devices
+              md: '2fr 2fr 1.5fr 1.5fr', // Original layout on medium and up
+            },
+            gap: { xs: '8px', sm: '16px' },
+            alignItems: 'center',
+            width: '100%',
+          }}
         >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'left', display: 'flex', gap: '2rem' }}>
-                        {/* Display the User's name by populating */}
-                        <div>{order.address?.receiverName}</div>
-                    </div>
-                    {/* Display payment status */}
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '0.5rem' }}>
-                        Contact no: {order.address?.receiverPhoneNumber}
-                    </div>
-                </div>
-            </AccordionSummary>
-            <AccordionDetails style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '10px' }}>
-                {/* Payment and shipping status */}
-                
-                    <div style={{ margin: 0, padding: 0, textAlign: 'left' }}>
-                        <Timeline sx={{
-                            [`& .${timelineItemClasses.root}:before`]: {
-                                flex: 0,
-                                padding: 0,
-                            },
-                        }}>
-                            <TimelineItem>
-                                <TimelineSeparator>
-                                    <TimelineDot color="grey" />
-                                    <TimelineConnector />
-                                </TimelineSeparator>
-                                <TimelineContent>
-                                    <Typography>Payment Status: {order.paymentStatus}</Typography>
-                                </TimelineContent>
-                            </TimelineItem>
+          {/* Left Section: Order ID and Timestamp */}
+          <Box>
+            <Typography
+              variant="body1"
+              sx={{
+                color: '#2D7EE8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              onClick={copyToClipboard}
+            >
+              {order._id.slice(0, 10)}...
+              <ContentCopyIcon fontSize="small" sx={{ marginLeft: '4px' }} />
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: 'textSecondary', fontSize: { xs: '0.8rem', sm: '1rem' } }}
+            >
+              {formatOrderDate(order.createdAt)}
+            </Typography>
+          </Box>
 
-                            {/* Delivery Status */}
-                            <TimelineItem>
-                                <TimelineSeparator>
-                                    <TimelineDot color="grey" />
-                                </TimelineSeparator>
-                                <TimelineContent>
-                                    <Typography>Delivery Status: {order.deliveryStatus}</Typography>
-                                </TimelineContent>
-                            </TimelineItem>
-                        </Timeline>
-                    </div>
-                
+          {/* Customer Information */}
+          <Box>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 'bold',
+                color: 'white',
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+              }}
+            >
+              {order.address?.receiverName || 'N/A'}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: 'textSecondary', fontSize: { xs: '0.8rem', sm: '1rem' } }}
+            >
+              {order.address?.receiverPhoneNumber || 'N/A'}
+            </Typography>
+          </Box>
 
-                {/* Loop through the items in the order */}
-                {order.items.map((item, index) => (
-                    
-                    <Accordion key={index} style={{ marginBottom: '1rem' }}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <strong style={{marginRight:'4px'}} >Product:</strong> <span>{item.product?.name || 'N/A'}</span>
-                        <div style={{marginLeft:'10px'}}>
-                            <strong>Quantity:</strong> {item.quantity}
-                        </div>
-                        
-                        </AccordionSummary>
-                        {/* Display item image */}
-                        <AccordionDetails >
-                        {console.log(`${baseImageUrl}${item.product.images}`)}
-                        {item.product?.images && (
-                            <Image src={`${baseImageUrl}${item.product.images}`} width={1076 / 4} height={683 / 4} alt='Image' />
-                        )}
-                        <div style={{margin:'5px'}}>
-                            <strong>Price at Purchase:</strong> {item.priceAtPurchase}
-                        </div>
-                        {item.discount > 0 && (
-                            <div style={{margin:'5px'}}>
-                                <strong>Discount:</strong> {item.discount}
-                            </div>
-                        )}
-                        <div  style={{margin:'5px'}}> 
-                            <strong>Extra Charges</strong>
-                            {item.extraCharges && item.extraCharges.map((ele) => {
-                            console.log(ele); // Log to console
-                            return (
-                                    <li key={ele.chargesName}><strong style={{marginRight:'10px'}}>{ele.chargesName}:</strong>{ele.chargesAmount}</li> // Render HTML tags
-                            );
-                            })}                    
-                        </div>
-                        </AccordionDetails>
-                    </Accordion>
-                ))}
+          {/* Delivery Status and Product Count */}
+          <Box>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'white',
+                fontSize: { xs: '0.8rem', sm: '1rem' },
+              }}
+            >
+              {order.deliveryStatus || 'N/A'}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#2D7EE8',
+                cursor: 'pointer',
+                fontSize: { xs: '0.8rem', sm: '1rem' },
+                width:'fit-content',
+              }}
+              onClick={handlePopoverOpen}
+            >
+              {order.items.length} {order.items.length === 1 ? 'Product' : 'Products'}
+            </Typography>
+            <Popover
+              id={id}
+              open={open}
+              anchorEl={anchorEl}
+              onClose={handlePopoverClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+            >
+              <Box sx={{ p: 2, maxWidth: '400px' }}>
+                <List>
+                  {popoverProducts.map((item, index) => (
+                    <ListItem key={index} disableGutters>
+                      <ListItemText
+                        primary={item.product?.specificCategoryVariant?.name || 'N/A'}
+                        secondary={
+                          <>
+                            <Typography component="span" variant="body2" color="textPrimary">
+                              SKU: {item.sku || 'N/A'}
+                            </Typography>
+                            <br />
+                            <Typography component="span" variant="body2" color="textPrimary">
+                              QTY: {item.quantity || 'N/A'}
+                            </Typography>
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            </Popover>
+          </Box>
 
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <div>
-                        <strong>OrderId:</strong> <span onClick={() => navigator.clipboard.writeText(order?._id)} style={{ color: 'yellow', cursor: 'pointer' }}>{order?._id}</span>
-                    </div>
-                    <div>
-                        <strong>Total Amount:</strong> <span style={{ color: '#03d11e' }}>{order.totalAmount}</span>
-                    </div>
-                    {/* Display Mode of Payment */}
-                    <div>
-                        <strong>Mode Of Payment:</strong> <span style={{ color: '#03d11e' }}>{order.paymentDetails?.mode?.name || 'COD'}</span>
-                    </div>
-                    <div>
-                        <strong>Payment Status:</strong> <span style={{ color: '#03d11e' }}>{order.status}</span>
-                    </div>
-                    <div>
-                        <strong>Ordered On:</strong> {new Date(order?.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                    </div>
-                    <div>
-                        <strong >Coupon Applied:</strong><span>{order.couponApplied==null?' None':order.couponApplied}</span>
-                    </div>
+          {/* Right Section: Mode of Payment and Total Amount */}
+          <Box sx={{ textAlign: { xs: 'left', sm: 'right' }, display:'flex', flexDirection:'column', alignItems:'flex-end', marginRight:'1rem' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: getPaymentModeColor(order.paymentDetails?.mode?.name || 'cod'),
+                fontSize: { xs: '0.8rem', sm: '1rem' },
+                backgroundColor:"#5E5E5E",
+                width:'fit-content',
+                padding:'0.05rem 0.3rem',
+                borderRadius:"0.3rem"
+              }}
+            >
+              {(order.paymentDetails?.mode?.name || 'cod').toUpperCase()}
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: 'white',
+                fontSize: { xs: '1rem', sm: '1.2rem' },
+              }}
+            >
+              ₹ {order.totalAmount.toFixed(2)}
+            </Typography>
+          </Box>
+        </Box>
+      </AccordionSummary>
 
-                    {/* Display User address if available */}
-                    <div>
-                        <strong>Address:</strong> {order.address?.addressLine1}, {order.address?.city}, {order.address?.state}, {order.address?.pincode}
-                    </div>
-                </div>
-            </AccordionDetails>
-        </Accordion>
-    );
+      <AccordionDetails>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 'bold', marginBottom: '4px', color: 'white' }}
+            >
+              Address Details
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}
+            >
+              {order.address?.addressLine1 || 'N/A'}, {order.address?.city || 'N/A'},{' '}
+              {order.address?.state || 'N/A'}, {order.address?.pincode || 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 'bold', marginBottom: '4px', color: 'white' }}
+            >
+              Payment Details
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}
+            >
+              {order.paymentDetails?.mode?.name !== 'online' ? 'Amount Paid Online: ' : 'Amount Paid: '}
+              <span style={{ color: '#34C759' }}>
+                ₹{order.paymentDetails?.amountPaidOnline || '0'}
+              </span>
+            </Typography>
+            {order.paymentDetails?.mode?.name !== 'online' && (
+              <Box>
+                {order.paymentDetails?.amountDueOnline > 0 && (
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
+                    Amount Due Online:
+                    <span style={{ color: 'red' }}> ₹{order.paymentDetails?.amountDueOnline}</span>
+                  </Typography>
+                )}
+                {order.paymentDetails?.amountPaidCod > 0 && (
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
+                    Amount Paid COD:
+                    <span style={{ color: '#34C759' }}> ₹{order.paymentDetails?.amountPaidCod}</span>
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </AccordionDetails>
+    </Accordion>
+  );
 };
 
 export default CustomerCard;

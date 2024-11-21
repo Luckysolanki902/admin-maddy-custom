@@ -1,164 +1,35 @@
-
-// import { connectToDatabase } from '@/lib/db';
-// import Order from '@/models/Order';
-// import User from '@/models/User';
-// import dayjs from 'dayjs';
-// import Product from '@/models/Product'
-
-// // This handler is now written for Next.js 15+ using App Router's API conventions
-// export async function GET(req) {
-//   try {
-//     const {
-//       searchParams
-//     } = new URL(req.url);
-
-//     const page = parseInt(searchParams.get('page') || '1', 10);
-//     const limit = Math.min(parseInt(searchParams.get('limit') || '30', 10), 30);
-//     const searchInput = searchParams.get('searchInput') || '';
-//     const searchField = searchParams.get('searchField') || 'name';
-//     const showLocalHostOrders = searchParams.get('showLocalHostOrders') || 'false';
-//     const startDate = searchParams.get('startDate') || '';
-//     const endDate = searchParams.get('endDate') || '';
-//     const problematicFilter = searchParams.get('problematicFilter') || '';
-
-//     const skip = (page - 1) * limit;
-
-//     // Base query for Orders
-//     const baseQuery = {};
-
-//     // Date range filter
-//     if (startDate && endDate) {
-//       const start = new Date(startDate);
-//       const end = new Date(endDate);
-//       if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-//         baseQuery.createdAt = { $gte: start, $lte: end };
-//       }
-//     }
-
-//     // Search filter for User name or phone number
-//     // prewritten logic
-//     // if (searchInput && searchField) {
-//     //   const userSearchQuery = {};
-//     //   userSearchQuery[searchField] = { $regex: new RegExp(searchInput, 'i') };
-
-//     //   const users = await User.find(userSearchQuery).select('_id');
-//     //   baseQuery.user = { $in: users.map((user) => user._id) };
-//     // }
-//     if (searchInput && searchField) {
-//       const orderSearchQuery = {};
-
-//       if (searchField === 'name') {
-//         orderSearchQuery['address.receiverName'] = { $regex: new RegExp(searchInput, 'i') };
-//       } else if (searchField === 'phone') {
-//         orderSearchQuery['address.receiverPhoneNumber'] = { $regex: new RegExp(searchInput, 'i') };
-//       }
-
-//       // Find orders matching the search criteria
-//       const matchingOrders = await Order.find(orderSearchQuery).select('_id');
-//       baseQuery._id = { $in: matchingOrders.map((order) => order._id) };
-//     }
-    
-//     console.log(baseQuery)
-
-//     let orders;
-//     let totalOrders;
-//     let totalPages;
-
-//     if (problematicFilter) {
-//       let problematicCondition = {};
-
-//       switch (problematicFilter) {
-//         case 'paymentNotVerified':
-//           problematicCondition = { 'paymentDetails.paymentVerified': false };
-//           break;
-//         case 'shiprocketNotCreated':
-//           problematicCondition = { 'purchaseStatus.shiprocketOrderCreated': false };
-//           break;
-//         case 'both':
-//           problematicCondition = {
-//             'paymentDetails.paymentVerified': false,
-//             'purchaseStatus.shiprocketOrderCreated': false,
-//           };
-//           break;
-//         default:
-//           return new Response(
-//             JSON.stringify({ message: 'Invalid problematic filter provided.' }),
-//             { status: 400 }
-//           );
-//       }
-
-//       const problematicQuery = { ...baseQuery, ...problematicCondition };
-
-//       totalOrders = await Order.countDocuments(problematicQuery);
-//       orders = await Order.find(problematicQuery)
-//         .sort({ createdAt: -1 })
-//         .skip(skip)
-//         .limit(limit);
-
-//       totalPages = Math.ceil(totalOrders / limit);
-//     } else {
-//       totalOrders = await Order.countDocuments(baseQuery);
-//       orders = await Order.find(baseQuery)
-//         .sort({ createdAt: -1 })
-//         .skip(skip)
-//         .limit(limit)
-//         .populate('user') // Populate user details
-//         .populate({
-//           path: 'items.product',
-//           model: 'Product',
-//         });
-
-//       totalPages = Math.ceil(totalOrders / limit);
-//     }
-
-//     return new Response(
-//       JSON.stringify({
-//         orders,
-//         totalOrders,
-//         totalPages,
-//         currentPage: page,
-//       }),
-//       { status: 200, headers: { 'Content-Type': 'application/json' } }
-//     );
-//   } catch (error) {
-//     console.error("Error in getorders API:", error);
-//     return new Response(
-//       JSON.stringify({ message: 'Internal Server Error' }),
-//       { status: 500, headers: { 'Content-Type': 'application/json' } }
-//     );
-//   }
-// }
-
-// export const config = {
-//   runtime: 'edge', // Optional: Enables Edge Runtime for better performance
-// };
-
+// /app/api/showcase/getcustomers/route.js
 import { connectToDatabase } from '@/lib/db';
 import Order from '@/models/Order';
-import User from '@/models/User';
 import dayjs from 'dayjs';
+import SpecificCategory from '@/models/SpecificCategory';
+import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';
 import Product from '@/models/Product';
 
-// This handler is now written for Next.js 15+ using App Router's API conventions
+
 export async function GET(req) {
   try {
+    await connectToDatabase();
     const { searchParams } = new URL(req.url);
 
+    // Extract query parameters
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = Math.min(parseInt(searchParams.get('limit') || '30', 10), 30);
     const searchInput = searchParams.get('searchInput') || '';
-    const searchField = searchParams.get('searchField') || 'name';
-    const showLocalHostOrders = searchParams.get('showLocalHostOrders') || 'false';
+    const searchField = searchParams.get('searchField') || 'orderId';
+    const showLocalHostOrders = searchParams.get('showLocalHostOrders') === 'true';
     const startDate = searchParams.get('startDate') || '';
     const endDate = searchParams.get('endDate') || '';
     const problematicFilter = searchParams.get('problematicFilter') || '';
 
     const skip = (page - 1) * limit;
 
-    // Base query for Orders
-    const baseQuery = {};
+    // Base query to filter paymentStatus
+    const baseQuery = {
+      paymentStatus: { $nin: ['pending', 'failed'] }, // Include only payment status which are not 'pending' or 'failed'
+    };
 
-    // Date range filter
+    // Apply date range filter if provided
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -167,7 +38,7 @@ export async function GET(req) {
       }
     }
 
-    // Search filter for name or phone number in Order's address
+    // Apply search filters
     if (searchInput && searchField) {
       const orderSearchQuery = {};
 
@@ -175,17 +46,24 @@ export async function GET(req) {
         orderSearchQuery['address.receiverName'] = { $regex: new RegExp(searchInput, 'i') };
       } else if (searchField === 'phoneNumber') {
         orderSearchQuery['address.receiverPhoneNumber'] = { $regex: new RegExp(searchInput, 'i') };
+      } else if (searchField === 'orderId') {
+        if (searchInput.match(/^[0-9a-fA-F]{24}$/)) { // Validate ObjectId
+          orderSearchQuery['_id'] = searchInput;
+        } else {
+          // If invalid ObjectId, return no results
+          orderSearchQuery['_id'] = null;
+        }
       }
 
-      // Find orders matching the search criteria
-      const matchingOrders = await Order.find(orderSearchQuery).select('_id');
-      baseQuery._id = { $in: matchingOrders.map((order) => order._id) };
+      // Merge search query with base query
+      Object.assign(baseQuery, orderSearchQuery);
     }
 
     let orders;
     let totalOrders;
     let totalPages;
 
+    // Handle problematic filters if any
     if (problematicFilter) {
       let problematicCondition = {};
 
@@ -215,24 +93,41 @@ export async function GET(req) {
       orders = await Order.find(problematicQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .populate('user')
+        .populate({
+          path: 'items.product',
+          model: 'Product',
+          populate: {
+            path: 'specificCategoryVariant',
+            model: 'SpecificCategoryVariant',
+          },
+        })
+        .populate('paymentDetails.mode'); // Populate payment mode
 
       totalPages = Math.ceil(totalOrders / limit);
     } else {
+      // Fetch orders without problematic filters
       totalOrders = await Order.countDocuments(baseQuery);
       orders = await Order.find(baseQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('user') // Populate user details
+        .populate('user')
         .populate({
           path: 'items.product',
           model: 'Product',
-        });
+          populate: {
+            path: 'specificCategoryVariant',
+            model: 'SpecificCategoryVariant',
+          },
+        })
+        .populate('paymentDetails.mode'); // Populate payment mode
 
       totalPages = Math.ceil(totalOrders / limit);
     }
 
+    // Respond with fetched data
     return new Response(
       JSON.stringify({
         orders,
@@ -243,14 +138,10 @@ export async function GET(req) {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error("Error in getorders API:", error);
+    console.error("Error in getcustomers API:", error);
     return new Response(
       JSON.stringify({ message: 'Internal Server Error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }
-
-export const config = {
-  runtime: 'edge', // Optional: Enables Edge Runtime for better performance
-};

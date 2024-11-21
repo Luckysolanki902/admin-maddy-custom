@@ -2,6 +2,9 @@
 import { createTheme } from '@mui/material/styles';
 
 const darkTheme = createTheme({
+  typography: {
+    fontFamily: 'Jost, Arial',
+  },
   palette: {
     mode: 'dark',
     primary: {

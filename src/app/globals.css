@@ -1,11 +1,7 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #1D1D1D;
     --foreground: #ededed;
   }
 }
@@ -28,6 +24,8 @@ body {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+  font-family: Jost, sans-serif;
+
 }
 
 a {
@@ -40,3 +38,4 @@ a {
     color-scheme: dark;
   }
 }
+
