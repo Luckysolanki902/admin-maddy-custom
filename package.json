@@ -23,6 +23,7 @@
     "@mui/x-date-pickers": "^7.22.2",
     "archiver": "^7.0.1",
     "aws-sdk": "^2.1692.0",
+    "axios": "^1.7.7",
     "busboy": "^1.6.0",
     "dayjs": "^1.11.13",
     "formidable": "^3.5.2",

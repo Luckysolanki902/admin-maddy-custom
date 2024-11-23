@@ -19,8 +19,7 @@ import {
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadToS3 } from '@/lib/aws';
-import HappyCustomers from '@/components/main-site-ui-comps/sliders/HappyCustomers';
-import AllHappyCustomers from '@/components/main-site-ui-comps/sliders/AllHappyCustomers';
+import AllHappyCustomers from '@/components/prod-site-ui-comps/sliders/AllHappyCustomers';
 
 const HappyCustomersPage = () => {
   const [categories, setCategories] = useState([]);

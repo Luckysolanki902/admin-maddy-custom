@@ -1,5 +1,7 @@
-// /app/admin/manage/orders/orderList/page.js
+// /components/page-sections/Index.js
+
 "use client";
+
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Container,
@@ -11,45 +13,84 @@ import {
   InputAdornment,
   Typography,
   Box,
+  Button,
+  Drawer,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TableContainer,
+  Paper,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import SyncIcon from '@mui/icons-material/Sync';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CustomerCard from '@/components/cards/CustomerCard';
+import Skeleton from '@mui/material/Skeleton';
+import FiltersDrawer from '@/components/page-sections/FiltersDrawer';
+import DateRangeChips from '@/components/page-sections/DateRangeChips';
+import OrdersList from '@/components/page-sections/OrdersList';
 
-/**
- * Constants
- */
 const ITEMS_PER_PAGE = 30;
 
 /**
  * Main Orders Page Component
  */
 const Index = () => {
-  // Main Orders State
+  // Consolidated Orders State
+  const [orderData, setOrderData] = useState({
+    orders: [],
+    totalOrders: 0,
+    totalPages: 1,
+  });
+
+  // Loading State
+  const [loading, setLoading] = useState(true);
+
+  // Other States
   const [expanded, setExpanded] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchField, setSearchField] = useState('orderId'); // Default to 'orderId'
   const [currentPage, setCurrentPage] = useState(1);
-  const [orders, setOrders] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(dayjs().startOf('day')); // Default to today's start
   const [endDate, setEndDate] = useState(dayjs().endOf('day')); // Default to today's end
-  const [showLocalHostOrders, setShowLocalHostOrders] = useState(false);
-  const [activeTag, setActiveTag] = useState('today'); // Default to 'all'
-  const [totalOrders, setTotalOrders] = useState(0);
+  const [activeTag, setActiveTag] = useState('today'); // Default to 'today'
 
   // Problematic Orders State
   const [selectedProblematicFilter, setSelectedProblematicFilter] = useState('');
-  const [problematicOrders, setProblematicOrders] = useState([]);
-  const [problematicTotalOrders, setProblematicTotalOrders] = useState(0);
-  const [problematicTotalPages, setProblematicTotalPages] = useState(1);
+  const [problematicOrderData, setProblematicOrderData] = useState({
+    orders: [],
+    totalOrders: 0,
+    totalPages: 1,
+  });
   const [problematicCurrentPage, setProblematicCurrentPage] = useState(1);
   const [problematicLoading, setProblematicLoading] = useState(false);
+
+  // Filters Drawer State
+  const [isFiltersDrawerOpen, setIsFiltersDrawerOpen] = useState(false);
+  const [shiprocketFilter, setShiprocketFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+
+  // Sync Shiprocket Orders State
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+
+  // Sync Details Dialog State
+  const [openSyncDetails, setOpenSyncDetails] = useState(false);
+  const [syncDetails, setSyncDetails] = useState([]);
 
   /**
    * Debounce Function
@@ -99,12 +140,12 @@ const Index = () => {
       days === 0
         ? 'today'
         : days === 1
-          ? 'yesterday'
-          : days === 6
-            ? 'last7days'
-            : days === 29
-              ? 'last30days'
-              : 'custom'
+        ? 'yesterday'
+        : days === 6
+        ? 'last7days'
+        : days === 29
+        ? 'last30days'
+        : 'custom'
     );
     setCurrentPage(1); // Reset to first page
     setProblematicCurrentPage(1); // Reset problematic orders to first page
@@ -128,18 +169,25 @@ const Index = () => {
       `searchField=${searchField}`,
       `startDate=${startDate ? dayjs(startDate).toISOString() : ''}`,
       `endDate=${endDate ? dayjs(endDate).toISOString() : ''}`,
-    ].filter(param => !param.startsWith('problematicFilter') && param.split('=')[1] !== '');
+      `shiprocketFilter=${shiprocketFilter}`,
+      `paymentStatusFilter=${paymentStatusFilter}`,
+    ].filter(param => {
+      const [key, value] = param.split('=');
+      return value !== '';
+    });
 
     const queryString = queryParams.join('&');
 
     try {
-      const res = await fetch(`/api/showcase/getcustomers?${queryString}`);
+      const res = await fetch(`/api/get-main/get-orders?${queryString}`);
       const data = await res.json();
 
       if (res.ok) {
-        setOrders(data.orders);
-        setTotalPages(data.totalPages);
-        setTotalOrders(data.totalOrders);
+        setOrderData({
+          orders: data.orders,
+          totalOrders: data.totalOrders,
+          totalPages: data.totalPages,
+        });
       } else {
         console.error("Error fetching data:", data);
       }
@@ -148,16 +196,26 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchInput, searchField, startDate, endDate]);
+  }, [
+    currentPage,
+    searchInput,
+    searchField,
+    startDate,
+    endDate,
+    shiprocketFilter,
+    paymentStatusFilter,
+  ]);
 
   /**
    * Fetch Problematic Orders Based on Selected Filter
    */
   const fetchProblematicOrders = useCallback(async () => {
     if (!selectedProblematicFilter) {
-      setProblematicOrders([]);
-      setProblematicTotalOrders(0);
-      setProblematicTotalPages(1);
+      setProblematicOrderData({
+        orders: [],
+        totalOrders: 0,
+        totalPages: 1,
+      });
       setProblematicCurrentPage(1);
       return;
     }
@@ -172,18 +230,25 @@ const Index = () => {
       `startDate=${startDate ? dayjs(startDate).toISOString() : ''}`,
       `endDate=${endDate ? dayjs(endDate).toISOString() : ''}`,
       `problematicFilter=${selectedProblematicFilter}`,
-    ].filter(param => param.split('=')[1] !== '');
+      `shiprocketFilter=${shiprocketFilter}`,
+      `paymentStatusFilter=${paymentStatusFilter}`,
+    ].filter(param => {
+      const [key, value] = param.split('=');
+      return value !== '';
+    });
 
     const queryString = queryParams.join('&');
 
     try {
-      const res = await fetch(`/api/showcase/getcustomers?${queryString}`);
+      const res = await fetch(`/api/get-main/get-orders?${queryString}`);
       const data = await res.json();
 
       if (res.ok) {
-        setProblematicOrders(data.orders);
-        setProblematicTotalOrders(data.totalOrders);
-        setProblematicTotalPages(data.totalPages);
+        setProblematicOrderData({
+          orders: data.orders,
+          totalOrders: data.totalOrders,
+          totalPages: data.totalPages,
+        });
       } else {
         console.error("Error fetching problematic data:", data);
       }
@@ -199,6 +264,8 @@ const Index = () => {
     searchField,
     startDate,
     endDate,
+    shiprocketFilter,
+    paymentStatusFilter,
   ]);
 
   /**
@@ -238,7 +305,6 @@ const Index = () => {
     }
   };
 
-
   /**
    * Handle Removing a Date Tag
    */
@@ -253,10 +319,11 @@ const Index = () => {
 
       // Reset problematic orders
       setSelectedProblematicFilter('');
-      setProblematicOrders([]);
-      setProblematicTotalOrders(0);
-      setProblematicTotalPages(1);
-      setProblematicCurrentPage(1);
+      setProblematicOrderData({
+        orders: [],
+        totalOrders: 0,
+        totalPages: 1,
+      });
 
       fetchOrders();
     }
@@ -275,10 +342,11 @@ const Index = () => {
 
     // Reset problematic orders
     setSelectedProblematicFilter('');
-    setProblematicOrders([]);
-    setProblematicTotalOrders(0);
-    setProblematicTotalPages(1);
-    setProblematicCurrentPage(1);
+    setProblematicOrderData({
+      orders: [],
+      totalOrders: 0,
+      totalPages: 1,
+    });
 
     fetchOrders();
   };
@@ -322,8 +390,67 @@ const Index = () => {
     }
   };
 
+  /**
+   * Handle Opening and Closing Filters Drawer
+   */
+  const toggleFiltersDrawer = (open) => () => {
+    setIsFiltersDrawerOpen(open);
+  };
+
+  /**
+   * Apply Filters from Filters Drawer
+   */
+  const applyFilters = () => {
+    setCurrentPage(1);
+    setProblematicCurrentPage(1);
+    fetchOrders();
+    if (selectedProblematicFilter) {
+      fetchProblematicOrders();
+    }
+    setIsFiltersDrawerOpen(false);
+  };
+
+  /**
+   * Handle Syncing Shiprocket Orders
+   */
+  const handleSyncShiprocketOrders = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    setSyncDetails([]);
+    setOpenSyncDetails(false);
+
+    try {
+      const res = await fetch('/api/delivery/create-shiprocket-orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startDate: startDate ? dayjs(startDate).toISOString() : null,
+          endDate: endDate ? dayjs(endDate).toISOString() : null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setSyncResult(`Shiprocket Orders Created: ${data.created}, Failed: ${data.failed}`);
+        setSyncDetails(data.details || []);
+        setOpenSyncDetails(true);
+        fetchOrders(); // Refresh orders list
+      } else {
+        setSyncResult(`Error: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Error syncing Shiprocket orders:', error);
+      setSyncResult('An error occurred while syncing Shiprocket orders.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
-    <Container  sx={{ marginBottom: '2rem', width: '100vw' }}>
+    <Container sx={{ marginBottom: '2rem', width: '100vw' }}>
       <Typography
         variant="h4"
         color="primary"
@@ -334,44 +461,12 @@ const Index = () => {
       </Typography>
 
       {/* Date Range Chips */}
-      <Box sx={{ display: 'flex', overflowX: 'auto', width: '100%', marginTop: '1rem', marginBottom: '1rem' }}>
-        <Stack direction="row" spacing={1} sx={{ marginBottom: 2, justifyContent: 'left', whiteSpace: 'nowrap' }}>
-          <Chip
-            label="Today"
-            onClick={() => applyDateRange(0)}
-            variant={activeTag === 'today' ? "filled" : "outlined"}
-            color={activeTag === 'today' ? "primary" : "default"}
-            onDelete={activeTag === 'today' ? () => handleTagRemove('today') : undefined}
-          />
-          <Chip
-            label="Yesterday"
-            onClick={() => applyDateRange(1)}
-            variant={activeTag === 'yesterday' ? "filled" : "outlined"}
-            color={activeTag === 'yesterday' ? "primary" : "default"}
-            onDelete={activeTag === 'yesterday' ? () => handleTagRemove('yesterday') : undefined}
-          />
-          <Chip
-            label="Last 7 Days"
-            onClick={() => applyDateRange(6)}
-            variant={activeTag === 'last7days' ? "filled" : "outlined"}
-            color={activeTag === 'last7days' ? "primary" : "default"}
-            onDelete={activeTag === 'last7days' ? () => handleTagRemove('last7days') : undefined}
-          />
-          <Chip
-            label="Last 30 Days"
-            onClick={() => applyDateRange(29)}
-            variant={activeTag === 'last30days' ? "filled" : "outlined"}
-            color={activeTag === 'last30days' ? "primary" : "default"}
-            onDelete={activeTag === 'last30days' ? () => handleTagRemove('last30days') : undefined}
-          />
-          <Chip
-            label="All"
-            onClick={handleAllTagClick}
-            variant={activeTag === 'all' ? "filled" : "outlined"}
-            color={activeTag === 'all' ? "primary" : "default"}
-          />
-        </Stack>
-      </Box>
+      <DateRangeChips
+        activeTag={activeTag}
+        applyDateRange={applyDateRange}
+        handleTagRemove={handleTagRemove}
+        handleAllTagClick={handleAllTagClick}
+      />
 
       {/* Search and Date Filter Section */}
       <Box
@@ -404,10 +499,12 @@ const Index = () => {
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <CloseIcon
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => setSearchInput('')}
-                  />
+                  {searchInput && (
+                    <CloseIcon
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSearchInput('')}
+                    />
+                  )}
                 </InputAdornment>
               ),
               startAdornment: (
@@ -434,59 +531,75 @@ const Index = () => {
               renderInput={(params) => <TextField {...params} size='small' />}
             />
           </LocalizationProvider>
+
+          {/* Sync Button is now in FiltersDrawer */}
+        </Box>
+
+        {/* Filters Button */}
+        <Box marginTop="10px">
+          <Button variant="contained" color="primary" onClick={toggleFiltersDrawer(true)}>
+            Filters
+          </Button>
         </Box>
       </Box>
 
-      {/* Main Orders Section */}
-      {loading ? (
-        <Typography variant="h6" align="center">Loading...</Typography>
-      ) : (
-        <>
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Total Orders: {totalOrders}
-            </Typography>
-            {orders.length === 0 ? (
-              <Typography variant="body1">No orders found.</Typography>
-            ) : (
-              orders.map(order => (
-                <CustomerCard
-                  key={order._id}
-                  order={order}
-                  expanded={expanded}
-                  handleChange={handleChange}
-                />
-              ))
-            )}
-          </Box>
+      {/* Filters Drawer */}
+      <Drawer
+        anchor="right"
+        open={isFiltersDrawerOpen}
+        onClose={toggleFiltersDrawer(false)}
+      >
+        <FiltersDrawer
+          shiprocketFilter={shiprocketFilter}
+          setShiprocketFilter={setShiprocketFilter}
+          paymentStatusFilter={paymentStatusFilter}
+          setPaymentStatusFilter={setPaymentStatusFilter}
+          applyFilters={applyFilters}
+          handleSyncShiprocketOrders={handleSyncShiprocketOrders} // Pass the handler
+        />
+      </Drawer>
 
-          <Pagination
-            count={totalPages}
-            page={currentPage}
-            onChange={(event, value) => setCurrentPage(value)}
-            variant="outlined"
-            shape="rounded"
-            sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}
-          />
-        </>
+      {/* Main Orders Section */}
+      <OrdersList
+        orders={orderData.orders}
+        loading={loading}
+        expanded={expanded}
+        handleChange={handleChange}
+        totalOrders={orderData.totalOrders}
+        ITEMS_PER_PAGE={ITEMS_PER_PAGE}
+      />
+
+      {/* Pagination */}
+      {!loading && orderData.orders.length > 0 && (
+        <Pagination
+          count={orderData.totalPages}
+          page={currentPage}
+          onChange={(event, value) => setCurrentPage(value)}
+          variant="outlined"
+          shape="rounded"
+          sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}
+        />
       )}
 
       {/* Problematic Orders Section */}
       {selectedProblematicFilter && (
         <>
           <Typography variant="subtitle1" gutterBottom>
-            Total Problematic Orders: {problematicTotalOrders}
+            Total Problematic Orders: {problematicOrderData.totalOrders}
           </Typography>
 
           {problematicLoading ? (
-            <Typography variant="h6" align="center">Loading...</Typography>
+            // Display Skeletons while loading
+            Array.from(new Array(ITEMS_PER_PAGE)).map((_, index) => (
+              <Skeleton key={index} variant="rectangular" height={80} sx={{ marginBottom: '1rem' }} />
+            ))
           ) : (
             <>
               <Box>
-                {problematicOrders.length === 0 ? (
+                {problematicOrderData.orders.length === 0 ? (
                   <Typography variant="body1">No problematic orders found.</Typography>
                 ) : (
-                  problematicOrders.map(order => (
+                  problematicOrderData.orders.map(order => (
                     <CustomerCard
                       key={order._id}
                       order={order}
@@ -498,7 +611,7 @@ const Index = () => {
               </Box>
 
               <Pagination
-                count={problematicTotalPages}
+                count={problematicOrderData.totalPages}
                 page={problematicCurrentPage}
                 onChange={handleProblematicPaginationChange}
                 variant="outlined"
@@ -509,6 +622,56 @@ const Index = () => {
           )}
         </>
       )}
+
+      {/* Snackbar for Sync Results */}
+      <Snackbar
+        open={!!syncResult}
+        autoHideDuration={6000}
+        onClose={() => setSyncResult(null)}
+      >
+        <Alert onClose={() => setSyncResult(null)} severity="info" sx={{ width: '100%' }}>
+          {syncResult}
+        </Alert>
+      </Snackbar>
+
+      {/* Sync Details Dialog */}
+      <Dialog
+        open={openSyncDetails}
+        onClose={() => setOpenSyncDetails(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Sync Shiprocket Orders Details</DialogTitle>
+        <DialogContent>
+          {syncDetails.length === 0 ? (
+            <Typography>No details to display.</Typography>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Order ID</TableCell>
+                    <TableCell>Delivery Status Response</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {syncDetails.map((detail, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{detail.orderId}</TableCell>
+                      <TableCell>{detail.deliveryStatusResponse}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSyncDetails(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
