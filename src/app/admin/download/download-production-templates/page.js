@@ -84,7 +84,9 @@ const ImagesPage = () => {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`/api/admin/get-main/get-sku-count?dateTag=${dateTag}`);
+      const res = await fetch(
+        `/api/admin/get-main/get-sku-count?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+      );
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Error fetching data.');
@@ -118,12 +120,6 @@ const ImagesPage = () => {
     const startTime = performance.now(); // Start timing
 
     try {
-      // Prepare stickers with their counts
-      const stickersWithCounts = availableImages.map((item) => ({
-        stickerId: item._id,
-        count: item.count,
-      }));
-
       const res = await fetch('/api/admin/download/download-raw-designs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -175,7 +171,7 @@ const ImagesPage = () => {
 
       const { token } = await tokenRes.json();
 
-      const downloadLink = `${SITE_URL}/api/download/download-raw-designs?token=${encodeURIComponent(token)}`;
+      const downloadLink = `${SITE_URL}/api/public/download/download-raw-designs?token=${encodeURIComponent(token)}`;
 
       // Copy to clipboard
       await navigator.clipboard.writeText(downloadLink);
@@ -346,10 +342,10 @@ const ImagesPage = () => {
                   <strong>SKU</strong>
                 </TableCell>
                 <TableCell align="right">
-                  <strong>Quantity</strong>
+                  <strong>Order Count</strong>
                 </TableCell>
                 <TableCell align="left">
-                  <strong>Category</strong>
+                  <strong>Specific Category Variant</strong>
                 </TableCell>
                 <TableCell align="center">
                   <strong>Image</strong>
