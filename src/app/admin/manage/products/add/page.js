@@ -70,7 +70,7 @@ const AddProductPage = () => {
   // Function to fetch unique main tags
   const fetchUniqueMainTags = useCallback(async () => {
     try {
-      const res = await fetch('/api/manage/product/get/unique-tags');
+      const res = await fetch('/api/admin/manage/product/get/unique-tags');
       const data = await res.json();
       if (res.ok) {
         setUniqueMainTags(data.uniqueMainTags);
@@ -113,7 +113,7 @@ const AddProductPage = () => {
 
     try {
       // Fetch specific category variant details
-      const resVariant = await fetch(`/api/manage/product/get/get-specific-category-variant/${variantId}`);
+      const resVariant = await fetch(`/api/admin/manage/product/get/get-specific-category-variant/${variantId}`);
       if (!resVariant.ok) {
         throw new Error('Failed to fetch specific category variant.');
       }
@@ -121,7 +121,7 @@ const AddProductPage = () => {
       setSpecificCategoryVariant(variantData);
 
       // Fetch specific category details
-      const resCategory = await fetch(`/api/manage/product/get/get-specific-category/${variantData.specificCategory}`);
+      const resCategory = await fetch(`/api/admin/manage/product/get/get-specific-category/${variantData.specificCategory}`);
       if (!resCategory.ok) {
         throw new Error('Failed to fetch specific category.');
       }
@@ -138,7 +138,7 @@ const AddProductPage = () => {
   const fetchLatestProduct = useCallback(async () => {
     if (specificCategoryVariant) {
       try {
-        const res = await fetch(`/api/manage/product/get/get-reference?variantCode=${specificCategoryVariant.variantCode}`);
+        const res = await fetch(`/api/admin/manage/product/get/get-reference?variantCode=${specificCategoryVariant.variantCode}`);
         const latestProduct = await res.json();
 
         if (!res.ok) {
@@ -276,7 +276,7 @@ const AddProductPage = () => {
       console.log('Product Data to Send:', productData); // Debugging line
 
       // Send data to API
-      const res = await fetch('/api/manage/product/add', {
+      const res = await fetch('/api/admin/manage/product/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(productData),

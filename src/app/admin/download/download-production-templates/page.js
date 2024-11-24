@@ -84,9 +84,7 @@ const ImagesPage = () => {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(
-        `/api/get-main/get-sku-count?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
-      );
+      const res = await fetch(`/api/admin/get-main/get-sku-count?dateTag=${dateTag}`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Error fetching data.');
@@ -120,7 +118,13 @@ const ImagesPage = () => {
     const startTime = performance.now(); // Start timing
 
     try {
-      const res = await fetch('/api/download/download-raw-designs', {
+      // Prepare stickers with their counts
+      const stickersWithCounts = availableImages.map((item) => ({
+        stickerId: item._id,
+        count: item.count,
+      }));
+
+      const res = await fetch('/api/admin/download/download-raw-designs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate, endDate }),

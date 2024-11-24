@@ -181,7 +181,7 @@ const Index = () => {
     const queryString = queryParams.join('&');
 
     try {
-      const res = await fetch(`/api/get-main/get-orders?${queryString}`);
+      const res = await fetch(`/api/admin/get-main/get-orders?${queryString}`);
       const data = await res.json();
 
       if (res.ok) {
@@ -244,7 +244,7 @@ const Index = () => {
     const queryString = queryParams.join('&');
 
     try {
-      const res = await fetch(`/api/get-main/get-orders?${queryString}`);
+      const res = await fetch(`/api/admin/get-main/get-orders?${queryString}`);
       const data = await res.json();
 
       if (res.ok) {
@@ -427,7 +427,7 @@ const Index = () => {
     setOpenSyncDetails(false);
 
     try {
-      const res = await fetch('/api/manage/delivery/create-shiprocket-orders', {
+      const res = await fetch('/api/admin/manage/delivery/create-shiprocket-orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

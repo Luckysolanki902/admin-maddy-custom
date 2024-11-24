@@ -12,7 +12,7 @@ const SpecificCategoriesPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/get-main/specific-categories')
+    fetch('/api/admin/get-main/specific-categories')
       .then((res) => res.json())
       .then((data) => {
         setCategories(data);

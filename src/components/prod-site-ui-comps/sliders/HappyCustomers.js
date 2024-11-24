@@ -15,7 +15,7 @@ export default function HappyCustomers({ parentSpecificCategoryId, noShadow, noH
         const queryParam = parentSpecificCategoryId
           ? `?parentSpecificCategoryId=${parentSpecificCategoryId}`
           : '?homepage=true';
-        const response = await fetch(`/api/get-main/get-happy-customers${queryParam}`);
+        const response = await fetch(`/api/admin/get-main/get-happy-customers${queryParam}`);
         const data = await response.json();
 
         if (data?.happyCustomers) {
