@@ -420,7 +420,7 @@ const Index = () => {
     setOpenSyncDetails(false);
 
     try {
-      const res = await fetch('/api/delivery/create-shiprocket-orders', {
+      const res = await fetch('/api/manage/delivery/create-shiprocket-orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

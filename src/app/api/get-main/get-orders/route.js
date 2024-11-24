@@ -1,4 +1,4 @@
-// /app/api/showcase/getcustomers/route.js
+// /app/api/manage/getcustomers/route.js
 import { connectToDatabase } from '@/lib/db';
 import Order from '@/models/Order';
 import dayjs from 'dayjs';

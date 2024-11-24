@@ -1,4 +1,4 @@
-// /app/api/product/get/get-reference/route.js
+// /app/api/manage/product/get/get-reference/route.js
 
 import { connectToDatabase } from '@/lib/db';
 import Product from '@/models/Product';

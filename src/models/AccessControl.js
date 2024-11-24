@@ -9,13 +9,7 @@ const AccessControlSchema = new mongoose.Schema({
   },
   rolesAllowed: {
     type: [String],
-    required: true,
-    validate: {
-      validator: function (array) {
-        return array.length > 0; // Ensure at least one role is specified
-      },
-      message: "There must be at least one role allowed.",
-    },
+    default: ['admin'], // Default to allowing admins
   },
 }, { timestamps: true }); // Optionally track created and updated times
 

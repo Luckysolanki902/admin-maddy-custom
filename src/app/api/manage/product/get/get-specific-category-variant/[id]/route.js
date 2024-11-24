@@ -1,4 +1,4 @@
-// /app/api/product/get/get-specific-category-variant/[id]/route.js
+// /app/api/manage/product/get/get-specific-category-variant/[id]/route.js
 
 import { connectToDatabase } from '@/lib/db';
 import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';

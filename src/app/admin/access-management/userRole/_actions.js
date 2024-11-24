@@ -15,7 +15,6 @@ export async function setRole(formData) {
     const res = await (await clerkClient()).users.updateUser(formData.get('id'), {
       publicMetadata: { role: formData.get('role') },
     })
-    console.log(res)
     return { message: res.publicMetadata }
   } catch (err) {
     console.log(err)

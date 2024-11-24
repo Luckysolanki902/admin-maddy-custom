@@ -8,10 +8,10 @@ export default function AdminPage() {
       <h1 className={styles.heading}>Admin Dashboard</h1>
       
       <div className={styles.buttonContainer}>
-        <Link href="/admin/userRole" className={styles.button}>
+        <Link href="/admin/access-management/userRole" className={styles.button}>
           Manage User Role
         </Link>
-        <Link href="/admin/pathRole" className={styles.button}>
+        <Link href="/admin/access-management/pathRole" className={styles.button}>
           Manage Path Role
         </Link>
       </div>

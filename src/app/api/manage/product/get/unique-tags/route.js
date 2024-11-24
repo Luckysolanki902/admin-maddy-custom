@@ -1,4 +1,4 @@
-// /app/api/product/get/unique-tags/route.js
+// /app/api/manage/product/get/unique-tags/route.js
 
 import { connectToDatabase } from '@/lib/db';
 import Product from '@/models/Product';

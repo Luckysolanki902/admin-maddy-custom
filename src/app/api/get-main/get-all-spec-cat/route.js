@@ -1,4 +1,4 @@
-// app/api/
+// app/api/get-main/get-all-spec-cat/route.js
 import { connectToDatabase } from "@/lib/db";
 import SpecificCategory from "@/models/SpecificCategory";
 import { NextResponse } from "next/server";

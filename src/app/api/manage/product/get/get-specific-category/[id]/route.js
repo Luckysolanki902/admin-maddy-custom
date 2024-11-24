@@ -1,4 +1,4 @@
-// /app/api/product/get/get-specific-category/[id]/route.js
+// /app/api/manage/product/get/get-specific-category/[id]/route.js
 
 import { connectToDatabase } from '@/lib/db';
 import SpecificCategory from '@/models/SpecificCategory';

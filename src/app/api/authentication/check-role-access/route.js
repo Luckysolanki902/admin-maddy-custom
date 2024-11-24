@@ -10,6 +10,11 @@ export async function GET(request) {
   const userRole = searchParams.get("role");
 
   try {
+    // If the user role is 'admin', allow access immediately
+    if (userRole === "admin") {
+      return new Response(JSON.stringify({ allowed: true }), { status: 200 });
+    }
+
     // Fetch all potential matching paths from the database
     const pathData = await AccessControl.find({});
 

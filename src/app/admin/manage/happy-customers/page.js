@@ -37,7 +37,7 @@ const HappyCustomersPage = () => {
 
   useEffect(() => {
     // Fetch specific categories
-    fetch('/api/showcase/happycustomers/get-specific-categories')
+    fetch('/api/manage/happycustomers/get-specific-categories')
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch((err) => console.error('Error fetching categories:', err.message));
@@ -90,7 +90,7 @@ const HappyCustomersPage = () => {
         })),
       };
 
-      const res = await fetch('/api/showcase/happycustomers', {
+      const res = await fetch('/api/manage/happycustomers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

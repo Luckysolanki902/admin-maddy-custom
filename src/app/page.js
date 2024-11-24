@@ -67,11 +67,13 @@ export default function Home() {
                 label="Enter Admin Password"
                 variant="outlined"
                 value={inputValue}
+                autoFocus
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown} // Listen for Enter key
                 fullWidth
                 sx={{mb:5, mt: 5}}
                 className={styles.heading}
+                type="password"
               />
             </div>
           )}
@@ -84,8 +86,8 @@ export default function Home() {
             <Link href="/admin/dev" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 89, 144, 0.4)' }}>Web-Dev</Link>
             <Link href="/admin/production" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 255, 255, 0.4)' }}>Production</Link>
           {masterAdminVisible && (
-            <Link href="/admin" className={styles.box}>
-              Master Admin
+            <Link href="/admin/access-management" className={styles.box}  style={{ 'boxShadow': '0px 0px 11.34px rgba(78, 161, 211, 0.4)' }}>
+              Master Admin 
             </Link>
           )}
           </div>
