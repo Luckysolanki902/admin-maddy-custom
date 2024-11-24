@@ -4,18 +4,21 @@ import CustomerCard from '@/components/cards/CustomerCard';
 import Skeleton from '@mui/material/Skeleton';
 
 const OrdersList = ({ orders, loading, expanded, handleChange, totalOrders, ITEMS_PER_PAGE }) => {
+  // Calculate total revenue by summing up the totalAmount of each order
+  const totalRevenue = orders.reduce((accumulator, order) => accumulator + order.totalAmount, 0);
+
   return (
     <Box>
       {loading ? (
         <Skeleton
           variant="text"
-          width={250}
+          width={350}
           height={70}
           sx={{ marginBottom: '0.5rem' }}
         />
       ) : (
         <Typography variant="h6" gutterBottom>
-          Total Orders: {totalOrders}
+          Total Orders: {totalOrders} | Total Revenue: ₹{totalRevenue}
         </Typography>
       )}
       {loading ? (
