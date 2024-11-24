@@ -1,12 +1,11 @@
+// /components/page-sections/OrdersList.js
+
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import CustomerCard from '@/components/cards/CustomerCard';
 import Skeleton from '@mui/material/Skeleton';
 
-const OrdersList = ({ orders, loading, expanded, handleChange, totalOrders, ITEMS_PER_PAGE }) => {
-  // Calculate total revenue by summing up the totalAmount of each order
-  const totalRevenue = orders.reduce((accumulator, order) => accumulator + order.totalAmount, 0);
-
+const OrdersList = ({ orders, loading, expanded, handleChange, totalOrders, totalItems, ITEMS_PER_PAGE }) => {
   return (
     <Box>
       {loading ? (
@@ -18,7 +17,7 @@ const OrdersList = ({ orders, loading, expanded, handleChange, totalOrders, ITEM
         />
       ) : (
         <Typography variant="h6" gutterBottom>
-          Total Orders: {totalOrders} | Total Revenue: ₹{totalRevenue}
+          Total Orders: {totalOrders} | Total Items: {totalItems}
         </Typography>
       )}
       {loading ? (

@@ -55,6 +55,7 @@ const Index = () => {
     orders: [],
     totalOrders: 0,
     totalPages: 1,
+    totalItems: 0, // Added totalItems
   });
 
   // Loading State
@@ -75,6 +76,7 @@ const Index = () => {
     orders: [],
     totalOrders: 0,
     totalPages: 1,
+    totalItems: 0, // Added totalItems
   });
   const [problematicCurrentPage, setProblematicCurrentPage] = useState(1);
   const [problematicLoading, setProblematicLoading] = useState(false);
@@ -187,6 +189,7 @@ const Index = () => {
           orders: data.orders,
           totalOrders: data.totalOrders,
           totalPages: data.totalPages,
+          totalItems: data.totalItems, // Set totalItems
         });
       } else {
         console.error("Error fetching data:", data);
@@ -215,6 +218,7 @@ const Index = () => {
         orders: [],
         totalOrders: 0,
         totalPages: 1,
+        totalItems: 0, // Reset totalItems
       });
       setProblematicCurrentPage(1);
       return;
@@ -248,6 +252,7 @@ const Index = () => {
           orders: data.orders,
           totalOrders: data.totalOrders,
           totalPages: data.totalPages,
+          totalItems: data.totalItems, // Set totalItems
         });
       } else {
         console.error("Error fetching problematic data:", data);
@@ -323,6 +328,7 @@ const Index = () => {
         orders: [],
         totalOrders: 0,
         totalPages: 1,
+        totalItems: 0, // Reset totalItems
       });
 
       fetchOrders();
@@ -346,6 +352,7 @@ const Index = () => {
       orders: [],
       totalOrders: 0,
       totalPages: 1,
+      totalItems: 0, // Reset totalItems
     });
 
     fetchOrders();
@@ -566,6 +573,7 @@ const Index = () => {
         expanded={expanded}
         handleChange={handleChange}
         totalOrders={orderData.totalOrders}
+        totalItems={orderData.totalItems} // Pass totalItems
         ITEMS_PER_PAGE={ITEMS_PER_PAGE}
       />
 
@@ -585,7 +593,7 @@ const Index = () => {
       {selectedProblematicFilter && (
         <>
           <Typography variant="subtitle1" gutterBottom>
-            Total Problematic Orders: {problematicOrderData.totalOrders}
+            Total Problematic Orders: {problematicOrderData.totalOrders} | Total Items: {problematicOrderData.totalItems}
           </Typography>
 
           {problematicLoading ? (

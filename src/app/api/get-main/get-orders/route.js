@@ -69,19 +69,7 @@ export async function GET(req) {
       } else if (shiprocketFilter === 'orderCreated') {
         baseQuery.deliveryStatus = 'orderCreated';
       }
-      // Other options can be added here, e.g.,
-      // else if (shiprocketFilter === 'processing') {
-      //   baseQuery.deliveryStatus = 'processing';
-      // }
-      // else if (shiprocketFilter === 'shipped') {
-      //   baseQuery.deliveryStatus = 'shipped';
-      // }
-      // else if (shiprocketFilter === 'delivered') {
-      //   baseQuery.deliveryStatus = 'delivered';
-      // }
-      // else if (shiprocketFilter === 'cancelled') {
-      //   baseQuery.deliveryStatus = 'cancelled';
-      // }
+      // Other options can be added here
     }
 
     // Payment Status Filters
@@ -99,6 +87,7 @@ export async function GET(req) {
     let orders;
     let totalOrders;
     let totalPages;
+    let totalItems = 0;
 
     // Handle problematic filters if any
     if (problematicFilter) {
@@ -127,6 +116,13 @@ export async function GET(req) {
       const problematicQuery = { ...baseQuery, ...problematicCondition };
 
       totalOrders = await Order.countDocuments(problematicQuery);
+      totalItems = await Order.aggregate([
+        { $match: problematicQuery },
+        { $unwind: "$items" },
+        { $group: { _id: null, total: { $sum: "$items.quantity" } } }
+      ]);
+      totalItems = totalItems[0] ? totalItems[0].total : 0;
+
       orders = await Order.find(problematicQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -146,6 +142,13 @@ export async function GET(req) {
     } else {
       // Fetch orders without problematic filters
       totalOrders = await Order.countDocuments(baseQuery);
+      totalItems = await Order.aggregate([
+        { $match: baseQuery },
+        { $unwind: "$items" },
+        { $group: { _id: null, total: { $sum: "$items.quantity" } } }
+      ]);
+      totalItems = totalItems[0] ? totalItems[0].total : 0;
+
       orders = await Order.find(baseQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -171,6 +174,7 @@ export async function GET(req) {
         totalOrders,
         totalPages,
         currentPage: page,
+        totalItems, // Include totalItems in the response
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
