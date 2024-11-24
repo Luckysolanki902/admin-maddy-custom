@@ -563,6 +563,7 @@ const Index = () => {
           setPaymentStatusFilter={setPaymentStatusFilter}
           applyFilters={applyFilters}
           handleSyncShiprocketOrders={handleSyncShiprocketOrders} // Pass the handler
+          totalOrders={orderData.totalOrders}
         />
       </Drawer>
 

@@ -3,10 +3,24 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import Product from '@/models/Product';
+import Order from '@/models/Order';
+import SpecificCategoryVariant from '@/models/SpecificCategoryVariant'; // Ensure this model exists
 import archiver from 'archiver';
 import pLimit from 'p-limit';
-import getStream from 'get-stream';
+import dayjs from 'dayjs';
 import { PassThrough } from 'stream';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Helper function to verify JWT token
+const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (err) {
+    return null;
+  }
+};
 
 export async function POST(request) {
   return handleDownload(request, 'POST');
@@ -20,110 +34,160 @@ async function handleDownload(request, method) {
   try {
     await connectToDatabase();
 
-    let stickers = [];
+    let startDate, endDate;
 
+    // Extract startDate and endDate based on the request method
     if (method === 'POST') {
       const body = await request.json();
-      stickers = body.stickers;
+      if (!body.startDate || !body.endDate) {
+        return NextResponse.json(
+          { message: 'Missing startDate or endDate in request body.' },
+          { status: 400 }
+        );
+      }
+
+      startDate = dayjs(body.startDate).toDate();
+      endDate = dayjs(body.endDate).toDate();
+
+      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
+        return NextResponse.json({ message: 'Invalid date format.' }, { status: 400 });
+      }
     } else if (method === 'GET') {
       const { searchParams } = new URL(request.url);
-      const stickerIds = searchParams.get('stickerIds');
-      const counts = searchParams.get('counts');
+      const token = searchParams.get('token');
 
-      if (!stickerIds || !counts) {
+      if (!token) {
         return NextResponse.json(
-          { message: 'Missing stickerIds or counts in query parameters.' },
+          { message: 'Missing token in query parameters.' },
           { status: 400 }
         );
       }
 
-      const stickerIdArray = stickerIds.split(',').map((id) => decodeURIComponent(id.trim()));
-      const countArray = counts.split(',').map((count) => parseInt(count.trim(), 10));
-
-      if (stickerIdArray.length !== countArray.length) {
+      const decoded = verifyToken(token);
+      if (!decoded) {
         return NextResponse.json(
-          { message: 'stickerIds and counts must have the same number of elements.' },
-          { status: 400 }
+          { message: 'Invalid or expired token.' },
+          { status: 401 }
         );
       }
 
-      for (let i = 0; i < stickerIdArray.length; i++) {
-        const id = stickerIdArray[i];
-        const count = countArray[i];
+      startDate = dayjs(decoded.startDate).toDate();
+      endDate = dayjs(decoded.endDate).toDate();
 
-        if (!id || typeof id !== 'string') {
-          return NextResponse.json(
-            { message: `Invalid stickerId at position ${i + 1}.` },
-            { status: 400 }
-          );
-        }
-
-        if (!count || typeof count !== 'number' || count < 1) {
-          return NextResponse.json(
-            { message: `Invalid count for stickerId ${id}.` },
-            { status: 400 }
-          );
-        }
-
-        stickers.push({ stickerId: id, count });
+      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
+        return NextResponse.json({ message: 'Invalid date format in token.' }, { status: 400 });
       }
     }
 
-    if (!stickers || !Array.isArray(stickers) || stickers.length === 0) {
-      return NextResponse.json({ message: 'Invalid stickers data.' }, { status: 400 });
-    }
+    // Aggregate Orders to get SKU counts, image URLs, and specificCategoryVariant
+    const imagesData = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate, $lte: endDate },
+          'paymentDetails.amountPaidOnline': { $gt: 0 }, // Assuming paymentVerified is when amountPaidOnline > 0
+          // Add additional filters if necessary (e.g., exclude test orders)
+        },
+      },
+      { $unwind: '$items' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.product',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      { $unwind: '$product' },
+      {
+        $lookup: {
+          from: 'specificcategoryvariants', // Ensure the collection name matches
+          localField: 'product.specificCategoryVariant',
+          foreignField: '_id',
+          as: 'specificCategoryVariant',
+        },
+      },
+      { $unwind: '$specificCategoryVariant' },
+      {
+        $group: {
+          _id: {
+            sku: '$product.sku',
+            specificCategoryVariant: '$specificCategoryVariant.name', // Assuming 'name' field exists
+          },
+          count: { $sum: '$items.quantity' },
+          imageUrl: { $first: '$product.designTemplate.imageUrl' },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]);
 
-    // Validate stickers
-    for (const sticker of stickers) {
-      if (
-        !sticker.stickerId ||
-        typeof sticker.stickerId !== 'string' ||
-        !sticker.count ||
-        typeof sticker.count !== 'number' ||
-        sticker.count < 1
-      ) {
-        return NextResponse.json({ message: 'Invalid sticker object format.' }, { status: 400 });
-      }
+    if (!imagesData || imagesData.length === 0) {
+      return NextResponse.json({ message: 'No images found for the specified date range.' }, { status: 404 });
     }
 
     // Initialize archiver
-    const archive = archiver('zip', { zlib: { level: 0 } });
+    const archive = archiver('zip', { zlib: { level: 9 } });
 
-    // Collect archive data into buffer
-    const bufferStream = new PassThrough();
-    archive.pipe(bufferStream);
+    // Handle archiver errors
+    archive.on('error', (err) => {
+      console.error('Archiver error:', err);
+      throw err;
+    });
+
+    // Prepare a PassThrough stream to pipe to response
+    const passThrough = new PassThrough();
+
+    // Set response headers
+    const formattedDate = dayjs().format('DD_MMM_YYYY_hh_mm_a').toLowerCase();
+    const fileName = `raw_designs_${formattedDate}.zip`;
+
+    const response = new NextResponse(passThrough, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename=${fileName}`,
+      },
+    });
+
+    // Pipe archiver to PassThrough
+    archive.pipe(passThrough);
 
     // Set up concurrency control
-    const limit = pLimit(10);
+    const limit = pLimit(10); // Adjust concurrency as needed
 
-    // Fetch and append images
-    const fetchPromises = stickers.map((sticker) =>
+    // Collect fetch promises
+    const fetchPromises = imagesData.map((sticker) =>
       limit(async () => {
-        const { stickerId, count } = sticker;
-        const product = await Product.findOne({ sku: stickerId }).lean();
+        const { _id: identifier, count, imageUrl } = sticker;
+        const { sku, specificCategoryVariant } = identifier;
 
-        if (!product) {
-          console.error(`Product with SKU ${stickerId} not found.`);
+        if (!imageUrl) {
+          console.error(`No imageUrl found for SKU ${sku}.`);
           return;
         }
 
-        const imageUrl = `${process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL}/${product.designTemplate.imageUrl}`;
+        const fullImageUrl = `${process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL}/${imageUrl}`;
 
         for (let i = 1; i <= count; i++) {
           try {
-            const response = await fetch(imageUrl);
-            if (!response.ok) {
-              console.error(`Failed to fetch image for SKU ${stickerId}: ${response.statusText}`);
-              continue;
+            const fetchResponse = await fetch(fullImageUrl);
+
+            if (!fetchResponse.ok) {
+              console.error(`Failed to fetch image for SKU ${sku}: ${fetchResponse.status} ${fetchResponse.statusText}`);
+              continue; // Skip this image
             }
 
-            // Append image to archive
-            const sanitizedSKU = stickerId.replace(/[/\\?%*:|"<>]/g, '-');
-            const imagePath = `${sanitizedSKU}/${sanitizedSKU}-${i}.png`;
+            // Read response as arrayBuffer and convert to Buffer
+            const arrayBuffer = await fetchResponse.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
 
-            archive.append(response.body, { name: imagePath, store: true });
+            // Append image to archive in specificCategoryVariant folder
+            const sanitizedSKU = sku.replace(/[/\\?%*:|"<>]/g, '-');
+            const sanitizedCategoryVariant = specificCategoryVariant.replace(/[/\\?%*:|"<>]/g, '-');
+            const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}.png`;
+
+            archive.append(buffer, { name: imagePath });
           } catch (error) {
-            console.error(`Error fetching image for SKU ${stickerId}:`, error);
+            console.error(`Error fetching image for SKU ${sku}:`, error);
           }
         }
       })
@@ -133,36 +197,6 @@ async function handleDownload(request, method) {
 
     // Finalize the archive
     archive.finalize();
-
-    // Collect the archive data
-    const zipBuffer = await getStream.buffer(bufferStream);
-
-    // Generate filename
-    const date = new Date();
-    const formattedDate = date
-      .toLocaleString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      })
-      .replace(/ /g, '_')
-      .replace(/,/g, '')
-      .replace(/:/g, '_')
-      .toLowerCase();
-
-    const fileName = `raw_designs_${formattedDate}.zip`;
-
-    // Create response
-    const response = new NextResponse(zipBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename=${fileName}`,
-      },
-    });
 
     return response;
   } catch (error) {

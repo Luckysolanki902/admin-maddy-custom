@@ -29,7 +29,7 @@ const FiltersDrawer = ({
 
   // Determine if the sync button should be visible
   const isSyncButtonVisible =
-    paymentStatusFilter === 'successful' && shiprocketFilter === 'pending' && totalCount > 0;
+    paymentStatusFilter === 'successful' && shiprocketFilter === 'pending';
 
   return (
     <Box sx={{ width: 300, padding: '1rem' }}>

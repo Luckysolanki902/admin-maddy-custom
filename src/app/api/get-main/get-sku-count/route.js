@@ -3,7 +3,6 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import Order from '@/models/Order';
-import Product from '@/models/Product';
 import dayjs from 'dayjs';
 
 export async function GET(request) {
@@ -11,33 +10,29 @@ export async function GET(request) {
     await connectToDatabase();
 
     const { searchParams } = new URL(request.url);
-    const dateTag = searchParams.get('dateTag') || 'today';
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
 
-    let startDate, endDate;
-
-    if (dateTag === 'today') {
-      const now = dayjs();
-      startDate = now.startOf('day').toDate();
-      endDate = now.endOf('day').toDate();
-    } else if (dateTag === 'yesterday') {
-      const yesterday = dayjs().subtract(1, 'day');
-      startDate = yesterday.startOf('day').toDate();
-      endDate = yesterday.endOf('day').toDate();
-    } else {
-      const specificDate = dayjs(dateTag, 'YYYY-MM-DD');
-      if (!specificDate.isValid()) {
-        return NextResponse.json({ message: 'Invalid date format' }, { status: 400 });
-      }
-      startDate = specificDate.startOf('day').toDate();
-      endDate = specificDate.endOf('day').toDate();
+    if (!startDateParam || !endDateParam) {
+      return NextResponse.json(
+        { message: 'Missing startDate or endDate in query parameters.' },
+        { status: 400 }
+      );
     }
 
-    // Aggregate Orders to get SKU counts and image URLs
+    const startDate = dayjs(startDateParam).toDate();
+    const endDate = dayjs(endDateParam).toDate();
+
+    if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
+      return NextResponse.json({ message: 'Invalid date format.' }, { status: 400 });
+    }
+
+    // Aggregate Orders to get SKU counts, image URLs, and specificCategoryVariant
     const imagesData = await Order.aggregate([
       {
         $match: {
           createdAt: { $gte: startDate, $lte: endDate },
-          'purchaseStatus.paymentVerified': true,
+          'paymentDetails.amountPaidOnline': { $gt: 0 }, // Assuming paymentVerified is when amountPaidOnline > 0
           // Add additional filters if necessary (e.g., exclude test orders)
         },
       },
@@ -52,8 +47,20 @@ export async function GET(request) {
       },
       { $unwind: '$product' },
       {
+        $lookup: {
+          from: 'specificcategoryvariants', // Ensure the collection name matches
+          localField: 'product.specificCategoryVariant',
+          foreignField: '_id',
+          as: 'specificCategoryVariant',
+        },
+      },
+      { $unwind: '$specificCategoryVariant' },
+      {
         $group: {
-          _id: '$product.sku',
+          _id: {
+            sku: '$product.sku',
+            specificCategoryVariant: '$specificCategoryVariant.name', // Assuming 'name' field exists
+          },
           count: { $sum: '$items.quantity' },
           imageUrl: { $first: '$product.designTemplate.imageUrl' },
         },
@@ -62,7 +69,8 @@ export async function GET(request) {
     ]);
 
     const response = imagesData.map((item) => ({
-      _id: item._id,
+      _id: item._id.sku,
+      specificCategoryVariant: item._id.specificCategoryVariant,
       count: item.count,
       imageUrl: item.imageUrl,
     }));

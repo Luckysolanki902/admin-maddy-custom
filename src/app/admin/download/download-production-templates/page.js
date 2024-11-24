@@ -30,7 +30,10 @@ import dayjs from 'dayjs';
 import Image from 'next/image';
 
 const ImagesPage = () => {
-  const [dateTag, setDateTag] = useState('today');
+  const [selectedDateTag, setSelectedDateTag] = useState('today');
+  const [customDate, setCustomDate] = useState('');
+  const [startDate, setStartDate] = useState(dayjs().startOf('day').toISOString());
+  const [endDate, setEndDate] = useState(dayjs().endOf('day').toISOString());
   const [imagesData, setImagesData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
@@ -40,7 +43,40 @@ const ImagesPage = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false); // For clipboard feedback
 
   const CLOUDFRONT_BASEURL = process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL;
-  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL; // Ensure this is set in your .env
+  const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+  // Function to compute startDate and endDate based on selectedDateTag
+  const computeDateRange = (dateTag, customDateValue) => {
+    let start, end;
+    const now = dayjs();
+
+    if (dateTag === 'today') {
+      start = now.startOf('day').toISOString();
+      end = now.endOf('day').toISOString();
+    } else if (dateTag === 'yesterday') {
+      const yesterday = now.subtract(1, 'day');
+      start = yesterday.startOf('day').toISOString();
+      end = yesterday.endOf('day').toISOString();
+    } else if (dateTag === 'custom') {
+      const specificDate = dayjs(customDateValue, 'YYYY-MM-DD');
+      if (!specificDate.isValid()) {
+        return { start: null, end: null };
+      }
+      start = specificDate.startOf('day').toISOString();
+      end = specificDate.endOf('day').toISOString();
+    }
+
+    return { start, end };
+  };
+
+  // Update startDate and endDate when selectedDateTag or customDate changes
+  useEffect(() => {
+    const { start, end } = computeDateRange(selectedDateTag, customDate);
+    if (start && end) {
+      setStartDate(start);
+      setEndDate(end);
+    }
+  }, [selectedDateTag, customDate]);
 
   // Function to fetch images data
   const fetchImagesData = async () => {
@@ -48,7 +84,9 @@ const ImagesPage = () => {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`/api/get-main/get-sku-count?dateTag=${dateTag}`);
+      const res = await fetch(
+        `/api/get-main/get-sku-count?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+      );
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Error fetching data.');
@@ -66,14 +104,11 @@ const ImagesPage = () => {
 
   useEffect(() => {
     fetchImagesData();
-  }, [dateTag]);
+  }, [startDate, endDate]);
 
-  // Function to handle image download
+  // Function to handle image download via POST
   const handleDownload = async () => {
-    // Filter out unavailable images
-    const availableImages = imagesData.filter((item) => !unavailableImages.has(item._id));
-
-    if (availableImages.length === 0) {
+    if (imagesData.length === 0) {
       setError('No available images to download.');
       return;
     }
@@ -85,16 +120,10 @@ const ImagesPage = () => {
     const startTime = performance.now(); // Start timing
 
     try {
-      // Prepare stickers with their counts
-      const stickersWithCounts = availableImages.map((item) => ({
-        stickerId: item._id,
-        count: item.count,
-      }));
-
       const res = await fetch('/api/download/download-raw-designs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stickers: stickersWithCounts }),
+        body: JSON.stringify({ startDate, endDate }),
       });
 
       if (!res.ok) {
@@ -103,24 +132,12 @@ const ImagesPage = () => {
       }
 
       const blob = await res.blob();
-      const date = new Date();
-      const formattedDate = date
-        .toLocaleString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        })
-        .replace(/ /g, '_')
-        .replace(/,/g, '')
-        .replace(/:/g, '_')
-        .toLowerCase();
-      const url = window.URL.createObjectURL(new Blob([blob]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
+      const formattedDate = dayjs().format('DD_MMM_YYYY_hh_mm_a').toLowerCase();
+      const fileName = `raw_designs_${formattedDate}.zip`;
       link.href = url;
-      link.setAttribute('download', `raw_designs_${formattedDate}.zip`);
+      link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -128,16 +145,7 @@ const ImagesPage = () => {
       const endTime = performance.now(); // End timing
       const timeTaken = ((endTime - startTime) / 1000).toFixed(2); // Time in seconds with 2 decimal places
 
-      if (availableImages.length < imagesData.length) {
-        const excludedCount = imagesData.length - availableImages.length;
-        setSuccess(
-          `Download started in ${timeTaken} seconds. ${excludedCount} image${
-            excludedCount > 1 ? 's were' : ' was'
-          } excluded due to unavailability.`
-        );
-      } else {
-        setSuccess(`Download started in ${timeTaken} seconds.`);
-      }
+      setSuccess(`Download started in ${timeTaken} seconds.`);
     } catch (error) {
       console.error('Error downloading zip:', error);
       setError(error.message || 'Failed to download zip.');
@@ -147,35 +155,32 @@ const ImagesPage = () => {
   };
 
   // Function to handle copying download link to clipboard
-  const handleCopyDownloadLink = () => {
-    // Filter out unavailable images
-    const availableImages = imagesData.filter((item) => !unavailableImages.has(item._id));
-
-    if (availableImages.length === 0) {
-      setError('No available images to generate download link.');
-      return;
-    }
-
-    // Construct stickerIds and counts
-    const stickerIds = availableImages.map((item) => item._id).join(',');
-    const counts = availableImages.map((item) => item.count).join(',');
-
-    // Construct the download link
-    const downloadLink = `${SITE_URL}/api/admin/download-raw-designs?stickerIds=${encodeURIComponent(
-      stickerIds
-    )}&counts=${encodeURIComponent(counts)}`;
-
-    // Copy to clipboard
-    navigator.clipboard
-      .writeText(downloadLink)
-      .then(() => {
-        setSuccess('Download link copied to clipboard!');
-        setSnackbarOpen(true);
-      })
-      .catch((err) => {
-        console.error('Failed to copy: ', err);
-        setError('Failed to copy download link.');
+  const handleCopyDownloadLink = async () => {
+    try {
+      // Generate JWT token with startDate and endDate
+      const tokenRes = await fetch('/api/authentication/tokens/generate-download-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate, endDate }),
       });
+
+      if (!tokenRes.ok) {
+        const errorData = await tokenRes.json();
+        throw new Error(errorData.message || 'Failed to generate download token.');
+      }
+
+      const { token } = await tokenRes.json();
+
+      const downloadLink = `${SITE_URL}/api/download/download-raw-designs?token=${encodeURIComponent(token)}`;
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(downloadLink);
+      setSuccess('Download link copied to clipboard!');
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      setError('Failed to copy download link.');
+    }
   };
 
   // Function to handle Snackbar close
@@ -217,8 +222,11 @@ const ImagesPage = () => {
         <Grid container spacing={2} alignItems="center">
           <Grid item>
             <Button
-              onClick={() => setDateTag('today')}
-              variant={dateTag === 'today' ? 'contained' : 'outlined'}
+              onClick={() => {
+                setSelectedDateTag('today');
+                setCustomDate('');
+              }}
+              variant={selectedDateTag === 'today' ? 'contained' : 'outlined'}
               color="primary"
               fullWidth
             >
@@ -227,8 +235,11 @@ const ImagesPage = () => {
           </Grid>
           <Grid item>
             <Button
-              onClick={() => setDateTag('yesterday')}
-              variant={dateTag === 'yesterday' ? 'contained' : 'outlined'}
+              onClick={() => {
+                setSelectedDateTag('yesterday');
+                setCustomDate('');
+              }}
+              variant={selectedDateTag === 'yesterday' ? 'contained' : 'outlined'}
               color="primary"
               fullWidth
             >
@@ -239,8 +250,11 @@ const ImagesPage = () => {
             <TextField
               label="Custom Date"
               type="date"
-              value={dateTag !== 'today' && dateTag !== 'yesterday' ? dateTag : ''}
-              onChange={(e) => setDateTag(dayjs(e.target.value).format('YYYY-MM-DD'))}
+              value={selectedDateTag === 'custom' ? customDate : ''}
+              onChange={(e) => {
+                setSelectedDateTag('custom');
+                setCustomDate(e.target.value);
+              }}
               fullWidth
               InputLabelProps={{
                 shrink: true,
@@ -267,34 +281,42 @@ const ImagesPage = () => {
           {/* Download Images Button */}
           <Grid item xs={12} sm={4}>
             <Tooltip title="Download all available images as a zip file">
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<DownloadIcon />}
-                onClick={handleDownload}
-                disabled={downloadLoading || imagesData.length === 0}
-                fullWidth
-                size="large"
-              >
-                {downloadLoading ? <CircularProgress size={24} color="inherit" /> : 'Download Images'}
-              </Button>
+              {/* Wrap the Button in a span to fix MUI Tooltip issue when disabled */}
+              <span style={{ display: 'inline-block', width: '100%' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleDownload}
+                  disabled={downloadLoading || imagesData.length === 0}
+                  fullWidth
+                  size="large"
+                  style={{ pointerEvents: 'auto' }} // Ensure tooltip works
+                >
+                  {downloadLoading ? <CircularProgress size={24} color="inherit" /> : 'Download Images'}
+                </Button>
+              </span>
             </Tooltip>
           </Grid>
 
           {/* Copy Download Link Button */}
           <Grid item xs={12} sm={4}>
             <Tooltip title="Copy the download link to clipboard">
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<ContentCopyIcon />}
-                onClick={handleCopyDownloadLink}
-                disabled={imagesData.length === 0}
-                fullWidth
-                size="large"
-              >
-                Copy Download Link
-              </Button>
+              {/* Wrap the Button in a span to fix MUI Tooltip issue when disabled */}
+              <span style={{ display: 'inline-block', width: '100%' }}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<ContentCopyIcon />}
+                  onClick={handleCopyDownloadLink}
+                  disabled={imagesData.length === 0}
+                  fullWidth
+                  size="large"
+                  style={{ pointerEvents: 'auto' }} // Ensure tooltip works
+                >
+                  Copy Download Link
+                </Button>
+              </span>
             </Tooltip>
           </Grid>
         </Grid>
@@ -320,7 +342,10 @@ const ImagesPage = () => {
                   <strong>SKU</strong>
                 </TableCell>
                 <TableCell align="right">
-                  <strong>Order Count</strong>
+                  <strong>Quantity</strong>
+                </TableCell>
+                <TableCell align="left">
+                  <strong>Category</strong>
                 </TableCell>
                 <TableCell align="center">
                   <strong>Image</strong>
@@ -333,6 +358,7 @@ const ImagesPage = () => {
                   <TableRow key={item._id}>
                     <TableCell>{item._id}</TableCell>
                     <TableCell align="right">{item.count}</TableCell>
+                    <TableCell align="left">{item.specificCategoryVariant}</TableCell>
                     <TableCell align="center">
                       {item.imageUrl && !unavailableImages.has(item._id) ? (
                         <Image
@@ -355,7 +381,7 @@ const ImagesPage = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} align="center">
+                  <TableCell colSpan={4} align="center">
                     No data available.
                   </TableCell>
                 </TableRow>
