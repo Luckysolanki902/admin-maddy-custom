@@ -9,7 +9,7 @@ export default function AllHappyCustomers() {
     useEffect(() => {
         async function fetchCategories() {
             try {
-                const response = await fetch("/api/get-main/get-all-spec-cat");
+                const response = await fetch("/api/admin/get-main/get-all-spec-cat");
                 const data = await response.json();
 
                 if (data?.categories) {

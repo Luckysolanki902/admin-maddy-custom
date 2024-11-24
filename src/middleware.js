@@ -1,16 +1,19 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-const isProtectedRoute = createRouteMatcher(['/admin(.*)',  ]);
+const isProtectedRoute = createRouteMatcher(['/admin(.*)','/api/admin(.*)' ]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { nextUrl } = req;
+  // console.log(req)
   const currentPath = nextUrl.pathname;
   const domainName = process.env.NEXT_PUBLIC_DOMAIN || 'http://localhost:3000';
   if (isProtectedRoute(req)) {
     const { sessionClaims } = await auth();
+    // console.log(auth)
 
-    const userRole = sessionClaims?.metadata?.role;
+    let userRole = sessionClaims?.metadata?.role;
+    
 
     const res = await fetch(`${domainName}/api/authentication/check-role-access?pathname=${currentPath}&role=${userRole}`);
     const { allowed } = await res.json();
