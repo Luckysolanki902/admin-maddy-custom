@@ -131,11 +131,18 @@ const ImagesPage = () => {
         throw new Error(errorData.message || 'Failed to download zip.');
       }
 
+      // Extract filename from Content-Disposition header
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let fileName = 'download.zip'; // Default filename
+      if (contentDisposition && contentDisposition.includes('filename=')) {
+        fileName = contentDisposition
+          .split('filename=')[1]
+          .replace(/['"]/g, '');
+      }
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const formattedDate = dayjs().format('DD_MMM_YYYY_hh_mm_a').toLowerCase();
-      const fileName = `raw_designs_${formattedDate}.zip`;
       link.href = url;
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
@@ -145,7 +152,7 @@ const ImagesPage = () => {
       const endTime = performance.now(); // End timing
       const timeTaken = ((endTime - startTime) / 1000).toFixed(2); // Time in seconds with 2 decimal places
 
-      setSuccess(`Download started in ${timeTaken} seconds.`);
+      setSuccess(`Downloaded in ${timeTaken} seconds.`);
     } catch (error) {
       console.error('Error downloading zip:', error);
       setError(error.message || 'Failed to download zip.');
@@ -356,19 +363,19 @@ const ImagesPage = () => {
               {imagesData.length > 0 ? (
                 imagesData.map((item) => (
                   <TableRow key={item._id}>
-                    <TableCell>{item._id}</TableCell>
+                    <TableCell>{item._id.sku}</TableCell>
                     <TableCell align="right">{item.count}</TableCell>
-                    <TableCell align="left">{item.specificCategoryVariant}</TableCell>
+                    <TableCell align="left">{item._id.specificCategoryVariant}</TableCell>
                     <TableCell align="center">
-                      {item.imageUrl && !unavailableImages.has(item._id) ? (
+                      {item.imageUrl && !unavailableImages.has(item._id.sku) ? (
                         <Image
                           src={`${CLOUDFRONT_BASEURL}/${item.imageUrl}`}
                           width={50}
                           height={50}
                           style={{ width: '50px', height: 'auto' }}
-                          alt={`Sticker ${item._id}`}
+                          alt={`Sticker ${item._id.sku}`}
                           onError={() => {
-                            setUnavailableImages((prev) => new Set(prev).add(item._id));
+                            setUnavailableImages((prev) => new Set(prev).add(item._id.sku));
                           }}
                         />
                       ) : (

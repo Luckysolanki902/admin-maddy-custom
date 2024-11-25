@@ -1,10 +1,9 @@
+// /app/api/generate-download-token/route.js
+
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
-
-// Specify Node.js runtime
-export const runtime = 'nodejs';
 
 // Set token expiration time (e.g., 1 hour)
 const TOKEN_EXPIRATION = '1h';
