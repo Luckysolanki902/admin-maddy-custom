@@ -11,6 +11,9 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// Specify Node.js runtime
+export const runtime = 'nodejs';
+
 // Helper function to verify JWT token (if needed)
 const verifyToken = (token) => {
   try {
@@ -21,52 +24,48 @@ const verifyToken = (token) => {
 };
 
 export async function GET(request) {
-  return handleDownload(request);
+  return handleDownload(request, 'GET');
 }
 
-async function handleDownload(request) {
+async function handleDownload(request, method) {
   try {
     await connectToDatabase();
 
-    const { searchParams } = new URL(request.url);
-    const token = searchParams.get('token');
+    let startDate, endDate;
 
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Missing token in query parameters.' },
-        { status: 400 }
-      );
-    }
+    // Extract startDate and endDate based on the request method
+    if (method === 'GET') {
+      const { searchParams } = new URL(request.url);
+      const token = searchParams.get('token');
 
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { message: 'Invalid or expired token.' },
-        { status: 401 }
-      );
-    }
+      if (!token) {
+        return NextResponse.json(
+          { message: 'Missing token in query parameters.' },
+          { status: 400 }
+        );
+      }
 
-    const { startDate, endDate } = decoded;
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return NextResponse.json(
+          { message: 'Invalid or expired token.' },
+          { status: 401 }
+        );
+      }
 
-    if (!startDate || !endDate) {
-      return NextResponse.json(
-        { message: 'Token does not contain startDate or endDate.' },
-        { status: 400 }
-      );
-    }
+      startDate = dayjs(decoded.startDate).toDate();
+      endDate = dayjs(decoded.endDate).toDate();
 
-    const start = dayjs(startDate).toDate();
-    const end = dayjs(endDate).toDate();
-
-    if (!dayjs(start).isValid() || !dayjs(end).isValid()) {
-      return NextResponse.json({ message: 'Invalid date format in token.' }, { status: 400 });
+      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
+        return NextResponse.json({ message: 'Invalid date format in token.' }, { status: 400 });
+      }
     }
 
     // Aggregate Orders to get SKU counts, image URLs, and specificCategoryVariant
     const imagesData = await Order.aggregate([
       {
         $match: {
-          createdAt: { $gte: start, $lte: end },
+          createdAt: { $gte: startDate, $lte: endDate },
           'paymentDetails.amountPaidOnline': { $gt: 0 }, // Assuming paymentVerified is when amountPaidOnline > 0
           // Add additional filters if necessary (e.g., exclude test orders)
         },

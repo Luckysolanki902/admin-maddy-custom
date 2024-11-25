@@ -1,5 +1,3 @@
-// /app/api/download/download-raw-designs/route.js
-
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import Product from '@/models/Product';
@@ -13,6 +11,9 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// Specify Node.js runtime
+export const runtime = 'nodejs';
+
 // Helper function to verify JWT token
 const verifyToken = (token) => {
   try {
@@ -24,10 +25,6 @@ const verifyToken = (token) => {
 
 export async function POST(request) {
   return handleDownload(request, 'POST');
-}
-
-export async function GET(request) {
-  return handleDownload(request, 'GET');
 }
 
 async function handleDownload(request, method) {
@@ -51,31 +48,6 @@ async function handleDownload(request, method) {
 
       if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
         return NextResponse.json({ message: 'Invalid date format.' }, { status: 400 });
-      }
-    } else if (method === 'GET') {
-      const { searchParams } = new URL(request.url);
-      const token = searchParams.get('token');
-
-      if (!token) {
-        return NextResponse.json(
-          { message: 'Missing token in query parameters.' },
-          { status: 400 }
-        );
-      }
-
-      const decoded = verifyToken(token);
-      if (!decoded) {
-        return NextResponse.json(
-          { message: 'Invalid or expired token.' },
-          { status: 401 }
-        );
-      }
-
-      startDate = dayjs(decoded.startDate).toDate();
-      endDate = dayjs(decoded.endDate).toDate();
-
-      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
-        return NextResponse.json({ message: 'Invalid date format in token.' }, { status: 400 });
       }
     }
 
@@ -121,7 +93,10 @@ async function handleDownload(request, method) {
     ]);
 
     if (!imagesData || imagesData.length === 0) {
-      return NextResponse.json({ message: 'No images found for the specified date range.' }, { status: 404 });
+      return NextResponse.json(
+        { message: 'No images found for the specified date range.' },
+        { status: 404 }
+      );
     }
 
     // Initialize archiver
