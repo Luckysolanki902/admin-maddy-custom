@@ -95,20 +95,6 @@ const Index = () => {
   const [syncDetails, setSyncDetails] = useState([]);
 
   /**
-   * Debounce Function
-   * Delays the execution of a function by a specified delay.
-   */
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        func(...args);
-      }, delay);
-    };
-  };
-
-  /**
    * Apply Predefined Date Ranges
    */
   const applyDateRange = (days) => {
@@ -273,14 +259,9 @@ const Index = () => {
     paymentStatusFilter,
   ]);
 
-  /**
-   * Debounced Fetch Orders Function
-   */
-  const debouncedFetchOrders = useCallback(debounce(fetchOrders, 300), [fetchOrders]);
-
   useEffect(() => {
-    debouncedFetchOrders();
-  }, [debouncedFetchOrders]);
+    fetchOrders();
+  }, [fetchOrders]);
 
   /**
    * Fetch Problematic Orders When Selected Filter or Page Changes
@@ -501,7 +482,15 @@ const Index = () => {
             size='small'
             placeholder='Search'
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              setCurrentPage(1); // Reset to first page on search input change
+              setProblematicCurrentPage(1); // Reset problematic orders to first page
+              fetchOrders();
+              if (selectedProblematicFilter) {
+                fetchProblematicOrders();
+              }
+            }}
             sx={{ minWidth: '200px' }}
             InputProps={{
               endAdornment: (
@@ -509,7 +498,15 @@ const Index = () => {
                   {searchInput && (
                     <CloseIcon
                       style={{ cursor: 'pointer' }}
-                      onClick={() => setSearchInput('')}
+                      onClick={() => {
+                        setSearchInput('');
+                        setCurrentPage(1); // Reset to first page
+                        setProblematicCurrentPage(1); // Reset problematic orders to first page
+                        fetchOrders();
+                        if (selectedProblematicFilter) {
+                          fetchProblematicOrders();
+                        }
+                      }}
                     />
                   )}
                 </InputAdornment>

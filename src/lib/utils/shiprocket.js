@@ -1,5 +1,7 @@
 import axios from 'axios';
 const SpecificCategoryVariant = require('@/models/SpecificCategoryVariant');
+const Product = require('@/models/Product');
+const PackagingBox = require('@/models/PackagingBox');
 
 /**
  * Function to get Shiprocket token
@@ -57,13 +59,7 @@ export async function trackShiprocketOrder(orderId) {
   }
 }
 
-/**
- * Calculates the total dimensions and weight for the order based on its items' variants.
- * Groups items by the same box ID and calculates the total dimensions and weight.
- *
- * @param {Array} items - Array of order items.
- * @returns {Object} - Total length, breadth, height, and weight.
- */
+
 export const getDimensionsAndWeight = async (items) => {
   const variantIds = items.map(item => {
     if (item.product && item.product.specificCategoryVariant) {
@@ -73,9 +69,12 @@ export const getDimensionsAndWeight = async (items) => {
     return null;
   }).filter(id => id !== null);
 
-  // Fetch all variants with their packaging details
+  // Fetch all variants with their packaging details using nested populate
   const variants = await SpecificCategoryVariant.find({ _id: { $in: variantIds } })
-    .populate('packagingDetails.boxId');
+    .populate({
+      path: 'packagingDetails.boxId',
+      model: 'PackagingBox',
+    });
 
   const variantMap = {};
   variants.forEach(variant => {
