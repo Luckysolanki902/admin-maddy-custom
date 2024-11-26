@@ -165,7 +165,7 @@ const ImagesPage = () => {
   const handleCopyDownloadLink = async () => {
     try {
       // Generate JWT token with startDate and endDate
-      const tokenRes = await fetch('/api/generate-download-token', {
+      const tokenRes = await fetch('/api/authentication/tokens/generate-download-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate, endDate }),
@@ -362,20 +362,20 @@ const ImagesPage = () => {
             <TableBody>
               {imagesData.length > 0 ? (
                 imagesData.map((item) => (
-                  <TableRow key={`${item._id.sku}-${item._id.specificCategoryVariant}`}>
-                    <TableCell>{item._id.sku}</TableCell>
+                  <TableRow key={item.sku}>
+                    <TableCell>{item.sku}</TableCell>
                     <TableCell align="right">{item.count}</TableCell>
-                    <TableCell align="left">{item._id.specificCategoryVariant}</TableCell>
+                    <TableCell align="left">{item.specificCategoryVariant}</TableCell>
                     <TableCell align="center">
-                      {item.imageUrl && !unavailableImages.has(item._id.sku) ? (
+                      {item.imageUrl && !unavailableImages.has(item.sku) ? (
                         <Image
                           src={`${CLOUDFRONT_BASEURL}/${item.imageUrl}`}
                           width={50}
                           height={50}
                           style={{ width: '50px', height: 'auto' }}
-                          alt={`Sticker ${item._id.sku}`}
+                          alt={`Sticker ${item.sku}`}
                           onError={() => {
-                            setUnavailableImages((prev) => new Set(prev).add(item._id.sku));
+                            setUnavailableImages((prev) => new Set(prev).add(item.sku));
                           }}
                         />
                       ) : (
