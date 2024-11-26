@@ -6,13 +6,20 @@ import { connectToDatabase } from '@/lib/db';
 import Product from '@/models/Product';
 import Order from '@/models/Order';
 import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';
-import archiver from 'archiver';
-import pLimit from 'p-limit';
+import JSZip from 'jszip';
 import dayjs from 'dayjs';
 import jwt from 'jsonwebtoken';
-import stream from 'stream';
+
+const AWS = require('aws-sdk');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Initialize AWS S3
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID, // Ensure these are server-side environment variables
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
 
 // Helper function to verify JWT token
 const verifyToken = (token) => {
@@ -102,9 +109,9 @@ async function handleDownload(request) {
           _id: {
             sku: '$product.sku',
             specificCategoryVariant: '$specificCategoryVariant.name',
+            imageFolderPath: '$specificCategoryVariant.imageFolderPath',
           },
           count: { $sum: '$items.quantity' },
-          imageUrl: { $first: '$product.designTemplate.imageUrl' },
         },
       },
       { $sort: { count: -1 } },
@@ -117,18 +124,52 @@ async function handleDownload(request) {
       );
     }
 
-    // Initialize archiver
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    // Initialize JSZip
+    const zip = new JSZip();
 
-    // Handle archiver errors
-    archive.on('error', (err) => {
-      console.error('Archiver error:', err);
-      throw err;
-    });
+    // Initialize an array to track unavailable images
+    let unavailableImages = [];
 
-    // Prepare a buffer stream
-    const bufferStream = new stream.PassThrough();
-    archive.pipe(bufferStream);
+    // Function to fetch image from S3 and add to zip
+    const fetchAndAddToZip = async (sticker) => {
+      const { sku, specificCategoryVariant, imageFolderPath } = sticker._id;
+      const { count } = sticker;
+
+      if (!imageFolderPath) {
+        console.error(`No imageFolderPath found for SKU ${sku}.`);
+        return;
+      }
+
+      const imageKey = `${imageFolderPath}/${sku}.jpg`; // Assuming JPEG images
+
+      try {
+        const params = {
+          Bucket: process.env.AWS_BUCKET,
+          Key: imageKey,
+        };
+
+        const data = await s3.getObject(params).promise();
+        const fileBuffer = data.Body;
+
+        // Sanitize folder and file names
+        const sanitizedSKU = sku.replace(/[/\\?%*:|"<>]/g, '-');
+        const sanitizedCategoryVariant = specificCategoryVariant.replace(/[/\\?%*:|"<>]/g, '-');
+
+        for (let i = 1; i <= count; i++) {
+          const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}.jpg`;
+          zip.file(imagePath, fileBuffer);
+        }
+      } catch (error) {
+        console.error(`Error fetching image for SKU ${sku}:`, error);
+        unavailableImages.push(sku); // Track unavailable SKU
+      }
+    };
+
+    // Process all images
+    await Promise.all(imagesData.map((sticker) => fetchAndAddToZip(sticker)));
+
+    // Generate zip buffer
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
     // Format dates for filename
     const formattedStartDate = dayjs(start).format('MMM_DD_YYYY');
@@ -138,63 +179,16 @@ async function handleDownload(request) {
     const headers = {
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename=${fileName}`,
+      'Content-Length': zipBuffer.length,
     };
 
-    // Set up concurrency control
-    const limit = pLimit(10); // Adjust concurrency as needed
+    // If there are unavailable images, you might want to notify the user
+    if (unavailableImages.length > 0) {
+      console.warn(`The following SKUs had unavailable images: ${unavailableImages.join(', ')}`);
+      // Optionally, include this information in the response headers or a separate file within the zip
+    }
 
-    // Function to fetch and append multiple images based on count
-    const fetchAndAppendImages = async (sticker) => {
-      const { sku, specificCategoryVariant } = sticker._id;
-      const { count, imageUrl } = sticker;
-
-      if (!imageUrl) {
-        console.error(`No imageUrl found for SKU ${sku}.`);
-        return;
-      }
-
-      const fullImageUrl = `${process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL}/${imageUrl}`;
-
-      for (let i = 1; i <= count; i++) {
-        try {
-          const response = await fetch(fullImageUrl);
-
-          if (!response.ok) {
-            console.error(
-              `Failed to fetch image for SKU ${sku}: ${response.status} ${response.statusText}`
-            );
-            continue; // Skip this image
-          }
-
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-
-          // Sanitize folder and file names
-          const sanitizedSKU = sku.replace(/[/\\?%*:|"<>]/g, '-');
-          const sanitizedCategoryVariant = specificCategoryVariant.replace(/[/\\?%*:|"<>]/g, '-');
-          const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}.png`;
-
-          // Append image to archive
-          archive.append(buffer, { name: imagePath });
-        } catch (error) {
-          console.error(`Error fetching image for SKU ${sku}:`, error);
-        }
-      }
-    };
-
-    // Limit concurrency and prepare promises
-    const fetchPromises = imagesData.map((sticker) => limit(() => fetchAndAppendImages(sticker)));
-
-    // Execute all fetch operations
-    await Promise.all(fetchPromises);
-
-    // Finalize the archive
-    archive.finalize();
-
-    // Convert the buffer stream to a readable stream
-    const readableStream = bufferStream;
-
-    return new NextResponse(readableStream, {
+    return new NextResponse(zipBuffer, {
       status: 200,
       headers,
     });

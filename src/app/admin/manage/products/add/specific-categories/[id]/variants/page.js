@@ -42,7 +42,7 @@ const SpecificCategoryVariantsPage = () => {
       </Typography>
       <List>
         {variants.map((variant) => (
-          <ListItem sx={{cursor: 'pointer'}} key={variant._id}  onClick={() => router.push(`/admin/products/add?variantId=${variant._id}`)}>
+          <ListItem sx={{cursor: 'pointer'}} key={variant._id}  onClick={() => router.push(`/admin/manage/products/add?variantId=${variant._id}`)}>
             <ListItemText primary={variant.name} />
           </ListItem>
         ))}

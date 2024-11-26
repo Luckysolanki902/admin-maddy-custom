@@ -6,12 +6,10 @@ const SpecificCategoryVariant = require('@/models/SpecificCategoryVariant');
  */
 export async function getShiprocketToken() {
   try {
-    console.log('Requesting Shiprocket token...');
     const response = await axios.post('https://apiv2.shiprocket.in/v1/external/auth/login', {
       email: process.env.SHIPROCKET_EMAIL,
       password: process.env.SHIPROCKET_PASSWORD,
     });
-    console.log('Shiprocket Token Response:', response.data);
     return response.data.token;
   } catch (error) {
     console.error('Error fetching Shiprocket token:', error.response ? error.response.data : error.message);
@@ -24,7 +22,6 @@ export async function getShiprocketToken() {
  */
 export async function createShiprocketOrder(orderData) {
   try {
-    console.log('Creating Shiprocket order...');
     const token = await getShiprocketToken();
 
     const response = await axios.post('https://apiv2.shiprocket.in/v1/external/orders/create/adhoc', orderData, {
@@ -33,7 +30,6 @@ export async function createShiprocketOrder(orderData) {
         'Authorization': `Bearer ${token}`,
       },
     });
-    console.log('Create Shiprocket Order Response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error creating Shiprocket order:', error.response ? error.response.data : error.message);
@@ -46,7 +42,6 @@ export async function createShiprocketOrder(orderData) {
  */
 export async function trackShiprocketOrder(orderId) {
   try {
-    console.log(`Tracking Shiprocket order with Order ID: ${orderId}`);
     const token = await getShiprocketToken();
 
     const response = await axios.get(`https://apiv2.shiprocket.in/v1/external/courier/track`, {
@@ -55,7 +50,6 @@ export async function trackShiprocketOrder(orderId) {
         'Authorization': `Bearer ${token}`,
       },
     });
-    console.log('Track Shiprocket Order Response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error tracking Shiprocket order:', error.response ? error.response.data : error.message);

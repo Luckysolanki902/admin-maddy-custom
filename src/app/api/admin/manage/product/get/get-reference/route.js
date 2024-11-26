@@ -71,8 +71,6 @@ export async function GET(request) {
       );
     }
 
-    console.log({latestProduct});
-
     return NextResponse.json(latestProduct, { status: 200 });
   } catch (error) {
     console.error('Error fetching the latest reference product:', error.message);
