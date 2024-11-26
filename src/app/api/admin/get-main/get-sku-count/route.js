@@ -1,4 +1,4 @@
-// /app/api/get-main/get-sku-count/route.js
+// /app/api/admin/get-main/get-sku-count/route.js
 
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
@@ -69,8 +69,10 @@ export async function GET(request) {
     ]);
 
     const response = imagesData.map((item) => ({
-      _id: item._id.sku,
-      specificCategoryVariant: item._id.specificCategoryVariant,
+      _id: {
+        sku: item._id.sku,
+        specificCategoryVariant: item._id.specificCategoryVariant,
+      },
       count: item.count,
       imageUrl: item.imageUrl,
     }));

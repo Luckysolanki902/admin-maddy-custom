@@ -2,14 +2,12 @@
 
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
-import Product from '@/models/Product';
 import Order from '@/models/Order';
-import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';
+import dayjs from 'dayjs';
 import archiver from 'archiver';
 import pLimit from 'p-limit';
-import dayjs from 'dayjs';
 import jwt from 'jsonwebtoken';
-import stream from 'stream';
+import { Buffer } from 'buffer';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -22,7 +20,6 @@ const verifyToken = (token) => {
   }
 };
 
-// Specify Node.js runtime
 export const config = {
   runtime: 'nodejs',
 };
@@ -119,32 +116,23 @@ async function handleDownload(request) {
     // Initialize archiver
     const archive = archiver('zip', { zlib: { level: 9 } });
 
-    // Handle archiver errors
-    archive.on('error', (err) => {
-      console.error('Archiver error:', err);
-      throw err;
+    // Buffer to collect the zip data
+    const buffers = [];
+    const bufferPromise = new Promise((resolve, reject) => {
+      archive.on('data', (data) => buffers.push(data));
+      archive.on('end', () => resolve());
+      archive.on('error', (err) => reject(err));
     });
-
-    // Prepare a buffer stream
-    const bufferStream = new stream.PassThrough();
-    archive.pipe(bufferStream);
 
     // Format dates for filename
     const formattedStartDate = dayjs(start).format('MMM_DD_YYYY');
     const formattedCurrentDateTime = dayjs().format('MMM_DD_YYYY_At_hh_mm_A');
     const fileName = `Orders_${formattedStartDate}_downloaded_On_${formattedCurrentDateTime}.zip`;
 
-    const headers = {
-      'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename=${fileName}`,
-    };
-
-    // Set up concurrency control
-    const limit = pLimit(10); // Adjust concurrency as needed
-
     // Function to fetch and append multiple images based on count
     const fetchAndAppendImages = async (sticker) => {
-      const { sku, specificCategoryVariant } = sticker._id;
+      const sku = sticker._id.sku;
+      const specificCategoryVariant = sticker._id.specificCategoryVariant;
       const { count, imageUrl } = sticker;
 
       if (!imageUrl) {
@@ -181,7 +169,10 @@ async function handleDownload(request) {
       }
     };
 
-    // Limit concurrency and prepare promises
+    // Set up concurrency control
+    const limit = pLimit(10); // Adjust concurrency as needed
+
+    // Prepare promises with limited concurrency
     const fetchPromises = imagesData.map((sticker) => limit(() => fetchAndAppendImages(sticker)));
 
     // Execute all fetch operations
@@ -190,10 +181,18 @@ async function handleDownload(request) {
     // Finalize the archive
     archive.finalize();
 
-    // Convert the buffer stream to a readable stream
-    const readableStream = bufferStream;
+    // Wait for the archive to finish
+    await bufferPromise;
 
-    return new NextResponse(readableStream, {
+    // Combine all buffer chunks into one buffer
+    const zipBuffer = Buffer.concat(buffers);
+
+    const headers = {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename=${fileName}`,
+    };
+
+    return new NextResponse(zipBuffer, {
       status: 200,
       headers,
     });

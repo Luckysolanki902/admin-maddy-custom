@@ -1,93 +1,48 @@
-// /app/api/download/download-raw-designs/route.js
+// /app/api/admin/download/download-raw-designs/route.js
 
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
-import Product from '@/models/Product';
 import Order from '@/models/Order';
-import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';
+import dayjs from 'dayjs';
 import archiver from 'archiver';
 import pLimit from 'p-limit';
-import dayjs from 'dayjs';
-import jwt from 'jsonwebtoken';
-import stream from 'stream';
+import { Buffer } from 'buffer';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-// Helper function to verify JWT token
-const verifyToken = (token) => {
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (err) {
-    return null;
-  }
-};
-
-// Specify Node.js runtime
 export const config = {
   runtime: 'nodejs',
 };
 
 export async function POST(request) {
-  return handleDownload(request, 'POST');
+  return handleDownload(request);
 }
 
-export async function GET(request) {
-  return handleDownload(request, 'GET');
-}
-
-async function handleDownload(request, method) {
+async function handleDownload(request) {
   try {
     await connectToDatabase();
 
-    let startDate, endDate;
+    const body = await request.json();
+    const { startDate, endDate } = body;
 
-    if (method === 'POST') {
-      const body = await request.json();
-      if (!body.startDate || !body.endDate) {
-        return NextResponse.json(
-          { message: 'Missing startDate or endDate in request body.' },
-          { status: 400 }
-        );
-      }
+    if (!startDate || !endDate) {
+      return NextResponse.json(
+        { message: 'Missing startDate or endDate in request body.' },
+        { status: 400 }
+      );
+    }
 
-      startDate = dayjs(body.startDate).toDate();
-      endDate = dayjs(body.endDate).toDate();
+    // Validate dates
+    const start = dayjs(startDate).toDate();
+    const end = dayjs(endDate).toDate();
 
-      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
-        return NextResponse.json({ message: 'Invalid date format.' }, { status: 400 });
-      }
-    } else if (method === 'GET') {
-      const { searchParams } = new URL(request.url);
-      const token = searchParams.get('token');
-
-      if (!token) {
-        return NextResponse.json(
-          { message: 'Missing token in query parameters.' },
-          { status: 400 }
-        );
-      }
-
-      const decoded = verifyToken(token);
-      if (!decoded) {
-        return NextResponse.json(
-          { message: 'Invalid or expired token.' },
-          { status: 401 }
-        );
-      }
-
-      startDate = dayjs(decoded.startDate).toDate();
-      endDate = dayjs(decoded.endDate).toDate();
-
-      if (!dayjs(startDate).isValid() || !dayjs(endDate).isValid()) {
-        return NextResponse.json({ message: 'Invalid date format in token.' }, { status: 400 });
-      }
+    if (!dayjs(start).isValid() || !dayjs(end).isValid()) {
+      return NextResponse.json({ message: 'Invalid date format.' }, { status: 400 });
     }
 
     // Aggregate Orders to get SKU counts, image URLs, and specificCategoryVariant
     const imagesData = await Order.aggregate([
       {
         $match: {
-          createdAt: { $gte: startDate, $lte: endDate },
+          createdAt: { $gte: start, $lte: end },
           'paymentDetails.amountPaidOnline': { $gt: 0 },
         },
       },
@@ -133,32 +88,23 @@ async function handleDownload(request, method) {
     // Initialize archiver
     const archive = archiver('zip', { zlib: { level: 9 } });
 
-    // Handle archiver errors
-    archive.on('error', (err) => {
-      console.error('Archiver error:', err);
-      throw err;
+    // Buffer to collect the zip data
+    const buffers = [];
+    const bufferPromise = new Promise((resolve, reject) => {
+      archive.on('data', (data) => buffers.push(data));
+      archive.on('end', () => resolve());
+      archive.on('error', (err) => reject(err));
     });
 
-    // Prepare a buffer stream
-    const bufferStream = new stream.PassThrough();
-    archive.pipe(bufferStream);
-
     // Format dates for filename
-    const formattedStartDate = dayjs(startDate).format('MMM_DD_YYYY');
+    const formattedStartDate = dayjs(start).format('MMM_DD_YYYY');
     const formattedCurrentDateTime = dayjs().format('MMM_DD_YYYY_At_hh_mm_A');
     const fileName = `Orders_${formattedStartDate}_downloaded_On_${formattedCurrentDateTime}.zip`;
 
-    const headers = {
-      'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename=${fileName}`,
-    };
-
-    // Set up concurrency control
-    const limit = pLimit(10); // Adjust concurrency as needed
-
     // Function to fetch and append multiple images based on count
     const fetchAndAppendImages = async (sticker) => {
-      const { sku, specificCategoryVariant } = sticker._id;
+      const sku = sticker._id.sku;
+      const specificCategoryVariant = sticker._id.specificCategoryVariant;
       const { count, imageUrl } = sticker;
 
       if (!imageUrl) {
@@ -195,7 +141,10 @@ async function handleDownload(request, method) {
       }
     };
 
-    // Limit concurrency and prepare promises
+    // Set up concurrency control
+    const limit = pLimit(10); // Adjust concurrency as needed
+
+    // Prepare promises with limited concurrency
     const fetchPromises = imagesData.map((sticker) => limit(() => fetchAndAppendImages(sticker)));
 
     // Execute all fetch operations
@@ -204,10 +153,18 @@ async function handleDownload(request, method) {
     // Finalize the archive
     archive.finalize();
 
-    // Convert the buffer stream to a readable stream
-    const readableStream = bufferStream;
+    // Wait for the archive to finish
+    await bufferPromise;
 
-    return new NextResponse(readableStream, {
+    // Combine all buffer chunks into one buffer
+    const zipBuffer = Buffer.concat(buffers);
+
+    const headers = {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename=${fileName}`,
+    };
+
+    return new NextResponse(zipBuffer, {
       status: 200,
       headers,
     });
