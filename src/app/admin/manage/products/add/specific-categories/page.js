@@ -1,9 +1,15 @@
-// /app/products/add/specific-categories/page.jsx
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, List, ListItem, ListItemText, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Typography,
+  List,
+  ListItem,
+  ListItemText,
+  Skeleton,
+  Grid,
+} from '@mui/material';
 import { useRouter } from 'next/navigation';
 
 const SpecificCategoriesPage = () => {
@@ -24,29 +30,33 @@ const SpecificCategoriesPage = () => {
       });
   }, []);
 
-  if (loading) {
-    return (
-      <Box p={4} textAlign="center">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <Box p={4}>
       <Typography variant="h4" gutterBottom>
         Specific Categories
       </Typography>
       <List>
-        {categories.map((category) => (
-          <ListItem
-          sx={{cursor: 'pointer'}}
-            key={category._id}
-            onClick={() => router.push(`/admin/manage/products/add/specific-categories/${category._id}/variants`)}
-          >
-            <ListItemText primary={category.name} />
-          </ListItem>
-        ))}
+        {loading
+          ? Array.from(new Array(5)).map((_, index) => (
+              <ListItem key={index}>
+                <ListItemText
+                  primary={<Skeleton variant="text" width="60%" height={60}/>}
+                />
+              </ListItem>
+            ))
+          : categories.map((category) => (
+              <ListItem
+                sx={{ cursor: 'pointer' }}
+                key={category._id}
+                onClick={() =>
+                  router.push(
+                    `/admin/manage/products/add/specific-categories/${category._id}/variants`
+                  )
+                }
+              >
+                <ListItemText primary={category.name} />
+              </ListItem>
+            ))}
       </List>
     </Box>
   );

@@ -1,5 +1,3 @@
-// ./src/app/admin/manage/addcoupon/page.js
-
 "use client"; // Ensure this is the first line if using client-side hooks
 
 import { useState, useEffect } from 'react';
@@ -24,9 +22,11 @@ import {
     Checkbox,
     FormControlLabel,
     Stack,
-    Typography
+    Typography,
+    Switch,
+    Tooltip
 } from '@mui/material';
-import { Add, Edit, Delete, AddCircle, RemoveCircle } from '@mui/icons-material';
+import { Add, Edit, Delete } from '@mui/icons-material';
 import { format } from 'date-fns';
 
 const CouponPage = () => {
@@ -38,11 +38,9 @@ const CouponPage = () => {
         discountValue: 0,
         validFrom: '',
         validUntil: '',
-        maxUses: 100,
-        usedCount: 0,
-        isActive: true,
+        maxUses: 10000,
+        isActive: false,
         showAsCard: false,
-        captions: [''],
         description: '',
         minimumPurchasePrice: 0,
         usagePerUser: 1,
@@ -55,7 +53,7 @@ const CouponPage = () => {
 
     const fetchCoupons = async () => {
         try {
-            const res = await fetch('/api/admin/get-main/get-all-coupon');
+            const res = await fetch('/api/admin/manage/coupons');
             if (!res.ok) {
                 throw new Error('Failed to fetch coupons.');
             }
@@ -70,10 +68,18 @@ const CouponPage = () => {
     const handleDialogOpen = (coupon = null) => {
         if (coupon) {
             setCurrentCoupon({
-                ...coupon,
-                validFrom: format(new Date(coupon.validFrom), 'yyyy-MM-dd'),
-                validUntil: format(new Date(coupon.validUntil), 'yyyy-MM-dd'),
-                captions: coupon.captions.length > 0 ? coupon.captions : [''],
+                code: coupon.code || '',
+                discountType: coupon.discountType || 'percentage',
+                discountValue: coupon.discountValue || 0,
+                validFrom: coupon.validFrom ? format(new Date(coupon.validFrom), 'yyyy-MM-dd') : '',
+                validUntil: coupon.validUntil ? format(new Date(coupon.validUntil), 'yyyy-MM-dd') : '',
+                maxUses: coupon.maxUses || 10000,
+                isActive: coupon.isActive || false,
+                showAsCard: coupon.showAsCard || false,
+                description: coupon.description || '',
+                minimumPurchasePrice: coupon.minimumPurchasePrice || 0,
+                usagePerUser: coupon.usagePerUser || 1,
+                _id: coupon._id || null, // Ensure _id is handled
             });
         } else {
             setCurrentCoupon({
@@ -82,14 +88,13 @@ const CouponPage = () => {
                 discountValue: 0,
                 validFrom: '',
                 validUntil: '',
-                maxUses: 100,
-                usedCount: 0,
-                isActive: true,
+                maxUses: 10000,
+                isActive: false,
                 showAsCard: false,
-                captions: [''],
                 description: '',
                 minimumPurchasePrice: 0,
                 usagePerUser: 1,
+                _id: null,
             });
         }
         setOpenDialog(true);
@@ -102,14 +107,13 @@ const CouponPage = () => {
             discountValue: 0,
             validFrom: '',
             validUntil: '',
-            maxUses: 100,
-            usedCount: 0,
-            isActive: true,
+            maxUses: 10000,
+            isActive: false,
             showAsCard: false,
-            captions: [''],
             description: '',
             minimumPurchasePrice: 0,
             usagePerUser: 1,
+            _id: null,
         });
         setOpenDialog(false);
     };
@@ -129,8 +133,8 @@ const CouponPage = () => {
 
         const method = currentCoupon._id ? 'PUT' : 'POST';
         const endpoint = currentCoupon._id
-            ? `/api/admin/get-main/get-all-coupon/${currentCoupon._id}`
-            : '/api/admin/get-main/get-all-coupon';
+            ? `/api/admin/manage/coupons/${currentCoupon._id}`
+            : '/api/admin/manage/coupons';
 
         try {
             const res = await fetch(endpoint, {
@@ -154,47 +158,37 @@ const CouponPage = () => {
     };
 
     const handleDeleteCoupon = async (id) => {
-    if (confirm('Are you sure you want to delete this coupon?')) {
-        try {
-            const res = await fetch(`/api/admin/get-main/delete-coupon/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                setSnackbarMessage('Coupon deleted successfully!');
-                fetchCoupons();
-            } else {
-                const errorData = await res.json();
-                console.log(errorData);
-                setSnackbarMessage(`Error: ${errorData.error || 'Failed to delete coupon.'}`);
+        if (confirm('Are you sure you want to delete this coupon?')) {
+            try {
+                const res = await fetch(`/api/admin/manage/coupons/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    setSnackbarMessage('Coupon deleted successfully!');
+                    fetchCoupons();
+                } else {
+                    const errorData = await res.json();
+                    console.log(errorData);
+                    setSnackbarMessage(`Error: ${errorData.error || 'Failed to delete coupon.'}`);
+                }
+            } catch (error) {
+                console.error('Delete Coupon Error:', error);
+                setSnackbarMessage(`Error: ${error.message}`);
             }
-        } catch (error) {
-            console.error('Delete Coupon Error:', error);
-            setSnackbarMessage(`Error: ${error.message}`);
         }
-    }
-};
-
+    };
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
+        let newValue = type === 'checkbox' ? checked : value;
+
+        // Ensure code is always uppercase
+        if (name === 'code') {
+            newValue = newValue.toUpperCase();
+        }
+
         setCurrentCoupon((prev) => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : value,
+            [name]: newValue,
         }));
-    };
-
-    const handleCaptionChange = (index, value) => {
-        const newCaptions = [...currentCoupon.captions];
-        newCaptions[index] = value;
-        setCurrentCoupon((prev) => ({ ...prev, captions: newCaptions }));
-    };
-
-    const addCaption = () => {
-        setCurrentCoupon((prev) => ({ ...prev, captions: [...prev.captions, ''] }));
-    };
-
-    const removeCaption = (index) => {
-        const newCaptions = [...currentCoupon.captions];
-        newCaptions.splice(index, 1);
-        setCurrentCoupon((prev) => ({ ...prev, captions: newCaptions }));
     };
 
     const generateRandomCode = () => {
@@ -206,8 +200,29 @@ const CouponPage = () => {
         setCurrentCoupon((prev) => ({ ...prev, code }));
     };
 
+    const handleToggleActive = async (id, isActive) => {
+        try {
+            const res = await fetch(`/api/admin/manage/coupons/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive }),
+            });
+
+            if (res.ok) {
+                setSnackbarMessage('Coupon status updated successfully!');
+                fetchCoupons();
+            } else {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'Error updating coupon status.');
+            }
+        } catch (error) {
+            console.error('Toggle Active Error:', error);
+            setSnackbarMessage(`Error: ${error.message}`);
+        }
+    };
+
     return (
-        <Container style={{ marginTop: '20px', color: 'white' }}>
+        <Container sx={{ marginTop: '20px', color: 'white' }}>
             <Typography variant="h4" align="center" gutterBottom>
                 Manage Coupons
             </Typography>
@@ -216,11 +231,11 @@ const CouponPage = () => {
                 color="primary"
                 startIcon={<Add />}
                 onClick={() => handleDialogOpen()}
-                style={{ marginBottom: '20px' }}
+                sx={{ marginBottom: '20px' }}
             >
                 Add Coupon
             </Button>
-            <TableContainer component={Paper} sx={{ backgroundColor: '#333' }}>
+            <TableContainer component={Paper} sx={{ backgroundColor: '#424242' }}>
                 <Table>
                     <TableHead>
                         <TableRow>
@@ -230,8 +245,8 @@ const CouponPage = () => {
                             <TableCell>Valid From</TableCell>
                             <TableCell>Valid Until</TableCell>
                             <TableCell>Max Uses</TableCell>
-                            <TableCell>Used Count</TableCell>
                             <TableCell>Show as Card</TableCell>
+                            <TableCell>Active</TableCell>
                             <TableCell>Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -239,7 +254,9 @@ const CouponPage = () => {
                         {coupons.map((coupon) => (
                             <TableRow key={coupon._id}>
                                 <TableCell>{coupon.code}</TableCell>
-                                <TableCell>{coupon.discountType.charAt(0).toUpperCase() + coupon.discountType.slice(1)}</TableCell>
+                                <TableCell>
+                                    {coupon.discountType.charAt(0).toUpperCase() + coupon.discountType.slice(1)}
+                                </TableCell>
                                 <TableCell>
                                     {coupon.discountType === 'percentage'
                                         ? `${coupon.discountValue}%`
@@ -248,17 +265,27 @@ const CouponPage = () => {
                                 <TableCell>{format(new Date(coupon.validFrom), 'yyyy-MM-dd')}</TableCell>
                                 <TableCell>{format(new Date(coupon.validUntil), 'yyyy-MM-dd')}</TableCell>
                                 <TableCell>{coupon.maxUses}</TableCell>
-                                <TableCell>{coupon.usageCount}</TableCell>
                                 <TableCell>
                                     <Checkbox checked={coupon.showAsCard} disabled />
                                 </TableCell>
                                 <TableCell>
-                                    <IconButton color="primary" onClick={() => handleDialogOpen(coupon)}>
-                                        <Edit />
-                                    </IconButton>
-                                    <IconButton color="secondary" onClick={() => handleDeleteCoupon(coupon._id)}>
-                                        <Delete />
-                                    </IconButton>
+                                    <Switch
+                                        checked={coupon.isActive}
+                                        onChange={(e) => handleToggleActive(coupon._id, e.target.checked)}
+                                        color="primary"
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Tooltip title="Edit Coupon">
+                                        <IconButton color="primary" onClick={() => handleDialogOpen(coupon)}>
+                                            <Edit />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Delete Coupon">
+                                        <IconButton color="secondary" onClick={() => handleDeleteCoupon(coupon._id)}>
+                                            <Delete />
+                                        </IconButton>
+                                    </Tooltip>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -268,11 +295,13 @@ const CouponPage = () => {
 
             {/* Add/Edit Coupon Dialog */}
             <Dialog open={openDialog} onClose={handleDialogClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{currentCoupon._id ? 'Edit Coupon' : 'Add Coupon'}</DialogTitle>
+                <DialogTitle >
+                    {currentCoupon._id ? 'Edit Coupon' : 'Add Coupon'}
+                </DialogTitle>
                 <DialogContent>
-                    <Stack spacing={2} sx={{ marginTop: 1 }}>
+                    <Stack spacing={3} sx={{ marginTop: 2 }}>
                         {/* Code and Generate Button */}
-                        <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack direction="row" spacing={2} alignItems="center">
                             <TextField
                                 name="code"
                                 label="Code"
@@ -281,8 +310,14 @@ const CouponPage = () => {
                                 onChange={handleInputChange}
                                 fullWidth
                                 required
+                                helperText="Either generate a random code or enter your own, e.g., 'FESTIVE500'"
                             />
-                            <Button onClick={generateRandomCode} variant="outlined" color="primary">
+                            <Button
+                                onClick={generateRandomCode}
+                                variant="contained"
+                                color="primary"
+                                sx={{ whiteSpace: 'nowrap' }}
+                            >
                                 Generate
                             </Button>
                         </Stack>
@@ -299,35 +334,6 @@ const CouponPage = () => {
                             }
                             label="Show as Card"
                         />
-
-                        {/* Captions */}
-                        <Typography variant="subtitle1">Captions</Typography>
-                        {currentCoupon.captions.map((caption, index) => (
-                            <Stack direction="row" spacing={1} alignItems="center" key={index}>
-                                <TextField
-                                    label={`Caption ${index + 1}`}
-                                    variant="outlined"
-                                    value={caption}
-                                    onChange={(e) => handleCaptionChange(index, e.target.value)}
-                                    fullWidth
-                                />
-                                <IconButton
-                                    color="secondary"
-                                    onClick={() => removeCaption(index)}
-                                    disabled={currentCoupon.captions.length === 1}
-                                >
-                                    <RemoveCircle />
-                                </IconButton>
-                            </Stack>
-                        ))}
-                        <Button
-                            startIcon={<AddCircle />}
-                            onClick={addCaption}
-                            variant="outlined"
-                            color="primary"
-                        >
-                            Add Caption
-                        </Button>
 
                         {/* Description */}
                         <TextField
@@ -367,6 +373,11 @@ const CouponPage = () => {
                             fullWidth
                             required
                             inputProps={{ min: 0 }}
+                            helperText={
+                                currentCoupon.discountType === 'percentage'
+                                    ? 'Enter percentage value (e.g., 20 for 20%)'
+                                    : 'Enter fixed amount (e.g., 500 for ₹500)'
+                            }
                         />
 
                         {/* Minimum Purchase Price */}
@@ -381,17 +392,17 @@ const CouponPage = () => {
                             inputProps={{ min: 0 }}
                         />
 
-                        {/* Usage Per User */}
-                        <TextField
+                        {/* Max Usage Per User */}
+                        {/* <TextField
                             name="usagePerUser"
-                            label="Usage Per User"
+                            label="Max Usage Per User"
                             type="number"
                             variant="outlined"
                             value={currentCoupon.usagePerUser}
                             onChange={handleInputChange}
                             fullWidth
                             inputProps={{ min: 1 }}
-                        />
+                        /> */}
 
                         {/* Valid From */}
                         <TextField
@@ -434,36 +445,10 @@ const CouponPage = () => {
                             fullWidth
                             inputProps={{ min: 0 }}
                         />
-
-                        {/* Used Count */}
-                        <TextField
-                            name="usedCount"
-                            label="Used Count"
-                            type="number"
-                            variant="outlined"
-                            value={currentCoupon.usedCount}
-                            onChange={handleInputChange}
-                            fullWidth
-                            disabled
-                        />
-
-                        {/* Active Status */}
-                        <TextField
-                            select
-                            name="isActive"
-                            label="Active"
-                            variant="outlined"
-                            value={currentCoupon.isActive}
-                            onChange={handleInputChange}
-                            fullWidth
-                        >
-                            <MenuItem value={true}>Active</MenuItem>
-                            <MenuItem value={false}>Inactive</MenuItem>
-                        </TextField>
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleDialogClose} color="primary">
+                    <Button onClick={handleDialogClose} color="secondary">
                         Cancel
                     </Button>
                     <Button onClick={handleSaveCoupon} color="primary" variant="contained">

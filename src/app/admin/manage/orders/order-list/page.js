@@ -46,9 +46,6 @@ import OrdersList from '@/components/page-sections/OrdersList';
 
 const ITEMS_PER_PAGE = 30;
 
-/**
- * Main Orders Page Component
- */
 const Index = () => {
   // Consolidated Orders State
   const [orderData, setOrderData] = useState({
