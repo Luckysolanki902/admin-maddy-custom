@@ -64,7 +64,7 @@ export default function Home() {
           ) : (
             <div className={styles.inputContainer}>
               <TextField
-                label="Enter Admin Password"
+                label="Enter Password"
                 variant="outlined"
                 value={inputValue}
                 autoFocus
@@ -78,13 +78,13 @@ export default function Home() {
             </div>
           )}
 
-         {!textFieldVisible && <p className={styles.subheading}>life is too short to hate it</p>}
+         {!textFieldVisible && <p className={styles.subheading} style={{fontStyle:'italic'}}>life is too short to hate it</p>}
 
           <div className={styles.grid}>
-            <Link href="/admin/market" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 255, 0, 0.4)' }}>Marketing</Link>
-            <Link href="/admin/design" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(0, 255, 229, 0.4)' }}>Design </Link>
-            <Link href="/admin/dev" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 89, 144, 0.4)' }}>Web-Dev</Link>
-            <Link href="/admin/production" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 255, 255, 0.4)' }}>Production</Link>
+            <Link href="/admin/departments/marketing" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 255, 0, 0.4)' }}>Marketing</Link>
+            <Link href="/admin/departments/designing" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(0, 255, 229, 0.4)' }}>Design </Link>
+            <Link href="/admin/departments/web-d" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 89, 144, 0.4)' }}>Web-Dev</Link>
+            <Link href="/admin/departments/production" className={styles.box} style={{ 'boxShadow': '0px 0px 11.34px rgba(255, 255, 255, 0.4)' }}>Production</Link>
           {masterAdminVisible && (
             <Link href="/admin/access-management" className={styles.box}  style={{ 'boxShadow': '0px 0px 11.34px rgba(78, 161, 211, 0.4)' }}>
               Master Admin 

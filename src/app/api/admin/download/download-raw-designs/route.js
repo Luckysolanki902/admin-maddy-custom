@@ -9,6 +9,7 @@ import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';
 import JSZip from 'jszip';
 import dayjs from 'dayjs';
 import jwt from 'jsonwebtoken';
+import path from 'path'; // Import path for handling file extensions
 
 const AWS = require('aws-sdk');
 
@@ -86,7 +87,7 @@ async function handleDownload(request, method) {
       }
     }
 
-    // Aggregate Orders to get SKU counts, image URLs, and specificCategoryVariant
+    // Aggregate Orders to get SKU counts and designTemplate.imageUrl
     const imagesData = await Order.aggregate([
       {
         $match: {
@@ -118,7 +119,7 @@ async function handleDownload(request, method) {
           _id: {
             sku: '$product.sku',
             specificCategoryVariant: '$specificCategoryVariant.name',
-            imageFolderPath: '$specificCategoryVariant.imageFolderPath',
+            designTemplateImageUrl: '$product.designTemplate.imageUrl',
           },
           count: { $sum: '$items.quantity' },
         },
@@ -138,15 +139,15 @@ async function handleDownload(request, method) {
 
     // Function to fetch image from S3 and add to zip
     const fetchAndAddToZip = async (sticker) => {
-      const { sku, specificCategoryVariant, imageFolderPath } = sticker._id;
+      const { sku, specificCategoryVariant, designTemplateImageUrl } = sticker._id;
       const { count } = sticker;
 
-      if (!imageFolderPath) {
-        console.error(`No imageFolderPath found for SKU ${sku}.`);
+      if (!designTemplateImageUrl) {
+        console.error(`No designTemplate.imageUrl found for SKU ${sku}.`);
         return;
       }
 
-      const imageKey = `${imageFolderPath}/${sku}.jpg`; // Assuming JPEG images
+      const imageKey = designTemplateImageUrl; // Assuming imageUrl is the S3 key
 
       try {
         const params = {
@@ -161,8 +162,11 @@ async function handleDownload(request, method) {
         const sanitizedSKU = sku.replace(/[/\\?%*:|"<>]/g, '-');
         const sanitizedCategoryVariant = specificCategoryVariant.replace(/[/\\?%*:|"<>]/g, '-');
 
+        // Extract file extension from imageUrl
+        const fileExtension = path.extname(imageKey) || '.jpg'; // Default to .jpg if no extension
+
         for (let i = 1; i <= count; i++) {
-          const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}.jpg`;
+          const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}${fileExtension}`;
           zip.file(imagePath, fileBuffer);
         }
       } catch (error) {
