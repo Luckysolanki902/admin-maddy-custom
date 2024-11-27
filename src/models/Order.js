@@ -11,7 +11,7 @@ const OrderSchema = new mongoose.Schema(
       required: true,
       index: true, // Index for efficient querying
     },
-    // Array of order items
+    // Array of order items\]
     items: [
       {
         // Reference to Product
