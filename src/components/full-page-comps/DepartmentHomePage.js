@@ -6,7 +6,7 @@ export default function DepartmentHomePage({ department = 'Marketing', quote, op
     const colorMap = {
         Marketing: 'rgb(255, 240, 28)',
         Design: 'rgb(28, 251, 255)',
-        Development: 'rgb(255, 58, 97)',
+        Web: 'rgb(255, 58, 97)',
         Production: 'rgb(255, 255, 255)',
     };
 
@@ -24,14 +24,12 @@ export default function DepartmentHomePage({ department = 'Marketing', quote, op
 
             <div className={styles.container}>
                 <h1 className={styles.title}>{department}</h1>
-                <p className={styles.quote} style={{ color: colorMap[department] }}>
+                <p className={styles.quote} style={{ color: colorMap['Web'] }}>
                     {quote}
                 </p>
                 <div className={styles.optionsDiv}>
                     {options?.map((option, index) => {
-                        const isLink = typeof option === 'object' && option.text && option.link;
-                        const boxShadowColor = convertRgbToRgba(colorMap[department], alpha);
-
+                        const boxShadowColor = convertRgbToRgba(colorMap['Web'], alpha);
                         return (
                             <Link
                                 key={index}
@@ -43,9 +41,17 @@ export default function DepartmentHomePage({ department = 'Marketing', quote, op
                             </Link>
                         );
                     })}
+                    {department === 'Web-d' &&
+                        <Link
+                            href={'#'}
+                            className={styles.option}
+                            style={{ boxShadow: ` 0px 0px 13px 0px ${convertRgbToRgba('rgb(255, 58, 97)', alpha)}` }}
+                        >
+                            Open Vs Code ;&#41;
+                        </Link>}
                 </div>
 
-                <div className={styles.comingsoon}>More Coming Soon...</div>
+                {department !== 'Web-d' && <div className={styles.comingsoon}>More Coming Soon...</div>}
             </div>
         </div>
     );

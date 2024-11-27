@@ -24,7 +24,16 @@ import {
     Stack,
     Typography,
     Switch,
-    Tooltip
+    Tooltip,
+    Grid,
+    Box,
+    useMediaQuery,
+    useTheme,
+    Card,
+    CardContent,
+    CardActions,
+    Divider,
+    InputAdornment,
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import { format } from 'date-fns';
@@ -46,6 +55,9 @@ const CouponPage = () => {
         usagePerUser: 1,
     });
     const [snackbarMessage, setSnackbarMessage] = useState('');
+
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
     useEffect(() => {
         fetchCoupons();
@@ -223,59 +235,82 @@ const CouponPage = () => {
 
     return (
         <Container sx={{ marginTop: '20px', color: 'white' }}>
-            <Typography variant="h4" align="center" gutterBottom>
+            <Typography variant={isSmallScreen ? "h5" : "h4"} align="center" gutterBottom>
                 Manage Coupons
             </Typography>
-            <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Add />}
-                onClick={() => handleDialogOpen()}
-                sx={{ marginBottom: '20px' }}
-            >
-                Add Coupon
-            </Button>
-            <TableContainer component={Paper} sx={{ backgroundColor: '#424242' }}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Code</TableCell>
-                            <TableCell>Discount Type</TableCell>
-                            <TableCell>Discount Value</TableCell>
-                            <TableCell>Valid From</TableCell>
-                            <TableCell>Valid Until</TableCell>
-                            <TableCell>Max Uses</TableCell>
-                            <TableCell>Show as Card</TableCell>
-                            <TableCell>Active</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {coupons.map((coupon) => (
-                            <TableRow key={coupon._id}>
-                                <TableCell>{coupon.code}</TableCell>
-                                <TableCell>
-                                    {coupon.discountType.charAt(0).toUpperCase() + coupon.discountType.slice(1)}
-                                </TableCell>
-                                <TableCell>
-                                    {coupon.discountType === 'percentage'
-                                        ? `${coupon.discountValue}%`
-                                        : `₹${coupon.discountValue}`}
-                                </TableCell>
-                                <TableCell>{format(new Date(coupon.validFrom), 'yyyy-MM-dd')}</TableCell>
-                                <TableCell>{format(new Date(coupon.validUntil), 'yyyy-MM-dd')}</TableCell>
-                                <TableCell>{coupon.maxUses}</TableCell>
-                                <TableCell>
-                                    <Checkbox checked={coupon.showAsCard} disabled />
-                                </TableCell>
-                                <TableCell>
-                                    <Switch
-                                        checked={coupon.isActive}
-                                        onChange={(e) => handleToggleActive(coupon._id, e.target.checked)}
-                                        color="primary"
+            <Grid container justifyContent="flex-end" sx={{ marginBottom: '20px' }}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<Add />}
+                    onClick={() => handleDialogOpen()}
+                    fullWidth={isSmallScreen}
+                >
+                    Add Coupon
+                </Button>
+            </Grid>
+
+            {/* Conditional Rendering: Table for Large Screens, Cards for Small Screens */}
+            {isSmallScreen ? (
+                <Grid container spacing={2}>
+                    {coupons.map((coupon) => (
+                        <Grid item xs={12} key={coupon._id}>
+                            <Card sx={{ backgroundColor: '#424242', color: 'white' }}>
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom>
+                                        {coupon.code}
+                                    </Typography>
+                                    <Divider sx={{ backgroundColor: 'grey.500', marginY: 1 }} />
+                                    <Typography variant="body1">
+                                        <strong>Type:</strong>{' '}
+                                        {coupon.discountType.charAt(0).toUpperCase() + coupon.discountType.slice(1)}
+                                    </Typography>
+                                    <Typography variant="body1">
+                                        <strong>Value:</strong>{' '}
+                                        {coupon.discountType === 'percentage'
+                                            ? `${coupon.discountValue}%`
+                                            : `₹${coupon.discountValue}`}
+                                    </Typography>
+                                    {/* <Typography variant="body1">
+                                        <strong>Description:</strong> {coupon.description || 'N/A'}
+                                    </Typography> */}
+                                    <Typography variant="body1">
+                                        <strong>Valid From:</strong> {format(new Date(coupon.validFrom), 'yyyy-MM-dd')}
+                                    </Typography>
+                                    <Typography variant="body1">
+                                        <strong>Valid Until:</strong> {format(new Date(coupon.validUntil), 'yyyy-MM-dd')}
+                                    </Typography>
+                                    <Typography variant="body1">
+                                        <strong>Minimum Purchase:</strong> ₹{coupon.minimumPurchasePrice}
+                                    </Typography>
+                                    {/* <Typography variant="body1">
+                                        <strong>Max Uses:</strong> {coupon.maxUses}
+                                    </Typography> */}
+                                    {/* <Typography variant="body1">
+                                        <strong>Usage Per User:</strong> {coupon.usagePerUser}
+                                    </Typography> */}
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={coupon.showAsCard}
+                                                disabled
+                                                color="primary"
+                                            />
+                                        }
+                                        label="Show as Card"
                                     />
-                                </TableCell>
-                                <TableCell>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={coupon.isActive}
+                                                onChange={(e) => handleToggleActive(coupon._id, e.target.checked)}
+                                                color="primary"
+                                            />
+                                        }
+                                        label="Active"
+                                    />
+                                </CardContent>
+                                <CardActions>
                                     <Tooltip title="Edit Coupon">
                                         <IconButton color="primary" onClick={() => handleDialogOpen(coupon)}>
                                             <Edit />
@@ -286,22 +321,80 @@ const CouponPage = () => {
                                             <Delete />
                                         </IconButton>
                                     </Tooltip>
-                                </TableCell>
+                                </CardActions>
+                            </Card>
+                        </Grid>
+                    ))}
+                </Grid>
+            ) : (
+                <TableContainer component={Paper} sx={{ backgroundColor: '#424242', overflowX: 'auto' }}>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Code</TableCell>
+                                <TableCell>Type</TableCell>
+                                <TableCell>Value</TableCell>
+                                <TableCell>Valid From</TableCell>
+                                <TableCell>Valid Until</TableCell>
+                                {/* <TableCell>Max Uses</TableCell> */}
+                                <TableCell>Show as Card</TableCell>
+                                <TableCell>Active</TableCell>
+                                <TableCell>Actions</TableCell>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                            {coupons.map((coupon) => (
+                                <TableRow key={coupon._id}>
+                                    <TableCell>{coupon.code}</TableCell>
+                                    <TableCell>
+                                        {coupon.discountType.charAt(0).toUpperCase() + coupon.discountType.slice(1)}
+                                    </TableCell>
+                                    <TableCell>
+                                        {coupon.discountType === 'percentage'
+                                            ? `${coupon.discountValue}%`
+                                            : `₹${coupon.discountValue}`}
+                                    </TableCell>
+                                    <TableCell>{format(new Date(coupon.validFrom), 'yyyy-MM-dd')}</TableCell>
+                                    <TableCell>{format(new Date(coupon.validUntil), 'yyyy-MM-dd')}</TableCell>
+                                    <TableCell>{coupon.maxUses}</TableCell>
+                                    <TableCell>
+                                        <Checkbox checked={coupon.showAsCard} disabled />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Switch
+                                            checked={coupon.isActive}
+                                            onChange={(e) => handleToggleActive(coupon._id, e.target.checked)}
+                                            color="primary"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Tooltip title="Edit Coupon">
+                                            <IconButton color="primary" onClick={() => handleDialogOpen(coupon)}>
+                                                <Edit />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Delete Coupon">
+                                            <IconButton color="secondary" onClick={() => handleDeleteCoupon(coupon._id)}>
+                                                <Delete />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            )}
 
             {/* Add/Edit Coupon Dialog */}
             <Dialog open={openDialog} onClose={handleDialogClose} maxWidth="sm" fullWidth>
-                <DialogTitle >
+                <DialogTitle>
                     {currentCoupon._id ? 'Edit Coupon' : 'Add Coupon'}
                 </DialogTitle>
                 <DialogContent>
                     <Stack spacing={3} sx={{ marginTop: 2 }}>
                         {/* Code and Generate Button */}
-                        <Stack direction="row" spacing={2} alignItems="center">
+                        <Stack direction={isSmallScreen ? "column" : "row"} spacing={2} alignItems="center">
                             <TextField
                                 name="code"
                                 label="Code"
@@ -316,7 +409,7 @@ const CouponPage = () => {
                                 onClick={generateRandomCode}
                                 variant="contained"
                                 color="primary"
-                                sx={{ whiteSpace: 'nowrap' }}
+                                sx={{ whiteSpace: 'nowrap', width: isSmallScreen ? '100%' : 'auto' }}
                             >
                                 Generate
                             </Button>
@@ -378,10 +471,17 @@ const CouponPage = () => {
                                     ? 'Enter percentage value (e.g., 20 for 20%)'
                                     : 'Enter fixed amount (e.g., 500 for ₹500)'
                             }
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        {currentCoupon.discountType === 'percentage' ? '%' : '₹'}
+                                    </InputAdornment>
+                                ),
+                            }}
                         />
 
                         {/* Minimum Purchase Price */}
-                        <TextField
+                        {/* <TextField
                             name="minimumPurchasePrice"
                             label="Minimum Purchase Price (₹)"
                             type="number"
@@ -390,18 +490,6 @@ const CouponPage = () => {
                             onChange={handleInputChange}
                             fullWidth
                             inputProps={{ min: 0 }}
-                        />
-
-                        {/* Max Usage Per User */}
-                        {/* <TextField
-                            name="usagePerUser"
-                            label="Max Usage Per User"
-                            type="number"
-                            variant="outlined"
-                            value={currentCoupon.usagePerUser}
-                            onChange={handleInputChange}
-                            fullWidth
-                            inputProps={{ min: 1 }}
                         /> */}
 
                         {/* Valid From */}
@@ -435,7 +523,7 @@ const CouponPage = () => {
                         />
 
                         {/* Max Uses */}
-                        <TextField
+                        {/* <TextField
                             name="maxUses"
                             label="Max Uses"
                             type="number"
@@ -444,7 +532,7 @@ const CouponPage = () => {
                             onChange={handleInputChange}
                             fullWidth
                             inputProps={{ min: 0 }}
-                        />
+                        /> */}
                     </Stack>
                 </DialogContent>
                 <DialogActions>
@@ -467,6 +555,7 @@ const CouponPage = () => {
             />
         </Container>
     );
+
 };
 
 export default CouponPage;
