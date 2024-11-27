@@ -24,12 +24,12 @@ export default function DepartmentHomePage({ department = 'Marketing', quote, op
 
             <div className={styles.container}>
                 <h1 className={styles.title}>{department}</h1>
-                <p className={styles.quote} style={{ color: colorMap['Web'] }}>
+                <p className={styles.quote} style={{ color: colorMap[department === 'Web-d'?'Web' : department] }}>
                     {quote}
                 </p>
                 <div className={styles.optionsDiv}>
                     {options?.map((option, index) => {
-                        const boxShadowColor = convertRgbToRgba(colorMap['Web'], alpha);
+                        const boxShadowColor = convertRgbToRgba(colorMap[department === 'Web-d'?'Web' : department], alpha);
                         return (
                             <Link
                                 key={index}
