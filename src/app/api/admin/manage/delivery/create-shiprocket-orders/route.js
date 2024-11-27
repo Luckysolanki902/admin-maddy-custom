@@ -100,7 +100,7 @@ export async function POST(req) {
                 selling_price: item.priceAtPurchase,
               })),
               payment_method: order.paymentDetails.amountDueCod > 0 ? 'COD' : 'Prepaid',
-              sub_total: order.items.reduce((total, item) => total + item.priceAtPurchase * item.quantity, 0),
+              sub_total: order.paymentDetails.amountDueCod,
               length: length,
               breadth: breadth,
               height: height,

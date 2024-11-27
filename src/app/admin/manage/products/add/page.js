@@ -1,5 +1,3 @@
-// /app/admin/manage/products/add/page.js
-
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -9,7 +7,6 @@ import {
   Typography,
   TextField,
   Button,
-  CircularProgress,
   Snackbar,
   IconButton,
   Grid,
@@ -21,6 +18,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Skeleton,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import slugify from 'slugify';
@@ -391,8 +389,42 @@ const AddProductPage = () => {
 
   if (!specificCategoryVariant || !specificCategory) {
     return (
-      <Box p={4} textAlign="center">
-        <CircularProgress />
+      <Box p={4} maxWidth="900px" margin="0 auto">
+        <Typography variant="h4" gutterBottom align="center">
+          Add New Product
+        </Typography>
+        <Grid container spacing={4}>
+          {/* Image Upload Skeletons */}
+          <Grid item xs={12} md={6}>
+            <Skeleton variant="rectangular" height={200} />
+            <Typography variant="caption" display="block" mt={1}>
+              Product Image (JPG)
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Skeleton variant="rectangular" height={200} />
+            <Typography variant="caption" display="block" mt={1}>
+              Production Template Image (PNG)
+            </Typography>
+          </Grid>
+
+          {/* Text Fields Skeleton */}
+          <Grid item xs={12}>
+            <Skeleton variant="text" height={40} />
+          </Grid>
+          <Grid item xs={12}>
+            <Skeleton variant="rectangular" height={56} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Skeleton variant="text" height={40} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Skeleton variant="text" height={40} />
+          </Grid>
+          <Grid item xs={12}>
+            <Skeleton variant="rectangular" height={56} />
+          </Grid>
+        </Grid>
       </Box>
     );
   }
@@ -406,91 +438,115 @@ const AddProductPage = () => {
       <Grid container spacing={4}>
         {/* Image Uploads */}
         <Grid item xs={12} md={6}>
-          <ImageUpload
-            label="Product Image (JPG)"
-            accept="image/jpeg"
-            onFileSelected={setProductImage}
-            file={productImage}
-          />
+          {loading ? (
+            <Skeleton variant="rectangular" height={60} />
+          ) : (
+            <ImageUpload
+              label="Product Image (JPG)"
+              accept="image/jpeg"
+              onFileSelected={setProductImage}
+              file={productImage}
+            />
+          )}
         </Grid>
         <Grid item xs={12} md={6}>
-          <ImageUpload
-            label="Production Template Image (PNG)"
-            accept="image/png"
-            onFileSelected={setProductionTemplateImage}
-            file={productionTemplateImage}
-          />
+          {loading ? (
+            <Skeleton variant="rectangular" height={60} />
+          ) : (
+            <ImageUpload
+              label="Production Template Image (PNG)"
+              accept="image/png"
+              onFileSelected={setProductionTemplateImage}
+              file={productionTemplateImage}
+            />
+          )}
         </Grid>
 
         {/* Product Name */}
         <Grid item xs={12}>
-          <TextField
-            label="Product Name"
-            value={name}
-            onChange={(e) => {
-              const value = e.target.value.replace(/[-?]/g, '');
-              setName(value);
-            }}
-            fullWidth
-            required
-            inputProps={{ maxLength: 200 }}
-          />
+          {loading ? (
+            <Skeleton variant="text" height={40} />
+          ) : (
+            <TextField
+              label="Product Name"
+              value={name}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[-?]/g, '');
+                setName(value);
+              }}
+              fullWidth
+              required
+              inputProps={{ maxLength: 200 }}
+            />
+          )}
         </Grid>
 
         {/* Main Tag Select */}
         <Grid item xs={12}>
-          <FormControl fullWidth required>
-            <InputLabel id="main-tag-label">Main Tag</InputLabel>
-            <Select
-              labelId="main-tag-label"
-              id="main-tag-select"
-              value={mainTag}
-              label="Main Tag"
-              onChange={(e) => {
-                if (e.target.value === '__create_new__') {
-                  handleOpenDialog();
-                } else {
-                  setMainTag(e.target.value);
-                }
-              }}
-            >
-              {uniqueMainTags.map((tag) => (
-                <MenuItem key={tag} value={tag}>
-                  {tag}
+          {loading ? (
+            <Skeleton variant="rectangular" height={56} />
+          ) : (
+            <FormControl fullWidth required>
+              <InputLabel id="main-tag-label">Main Tag</InputLabel>
+              <Select
+                labelId="main-tag-label"
+                id="main-tag-select"
+                value={mainTag}
+                label="Main Tag"
+                onChange={(e) => {
+                  if (e.target.value === '__create_new__') {
+                    handleOpenDialog();
+                  } else {
+                    setMainTag(e.target.value);
+                  }
+                }}
+              >
+                {uniqueMainTags.map((tag) => (
+                  <MenuItem key={tag} value={tag}>
+                    {tag}
+                  </MenuItem>
+                ))}
+                {/* Option to create a new tag */}
+                <MenuItem value="__create_new__" sx={{ fontStyle: 'italic' }}>
+                  Add New Tag
                 </MenuItem>
-              ))}
-              {/* Option to create a new tag */}
-              <MenuItem value="__create_new__" sx={{ fontStyle: 'italic' }}>
-                Add New Tag
-              </MenuItem>
-            </Select>
-          </FormControl>
+              </Select>
+            </FormControl>
+          )}
         </Grid>
 
         {/* Price */}
         <Grid item xs={12} sm={6}>
-          <TextField
-            label="Price"
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(parseFloat(e.target.value))}
-            fullWidth
-            required
-            inputProps={{ min: 0, step: '0.01' }}
-          />
+          {loading ? (
+            <Skeleton variant="text" height={40} />
+          ) : (
+            <TextField
+              label="Price"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(parseFloat(e.target.value))}
+              fullWidth
+              required
+              inputProps={{ min: 0, step: '0.01' }}
+            />
+          )}
         </Grid>
 
         {/* Display Order */}
         <Grid item xs={12} sm={6}>
-          <TextField
-            label="Display Order"
-            type="number"
-            value={displayOrder}
-            onChange={(e) => setDisplayOrder(parseInt(e.target.value, 10))}
-            fullWidth
-            required
-            inputProps={{ min: 0 }}
-          />
+          {loading ? (
+            <Skeleton variant="text" height={40} />
+          ) : (
+            <TextField
+              label="Display Order"
+              type="number"
+              value={displayOrder}
+              onChange={(e) => setDisplayOrder(parseInt(e.target.value, 10))}
+              fullWidth
+              required
+              inputProps={{ min: 0 }}
+            />
+          )}
         </Grid>
 
         {/* Submit Button */}
@@ -502,8 +558,9 @@ const AddProductPage = () => {
               onClick={handleFormSubmit}
               disabled={loading}
               size="large"
+              startIcon={loading && <Skeleton variant="circular" width={24} height={24} />}
             >
-              {loading ? <CircularProgress size={24} /> : 'Add Product'}
+              {loading ? 'Adding...' : 'Add Product'}
             </Button>
           </Box>
         </Grid>
