@@ -339,7 +339,6 @@ const CouponPage = () => {
                                 {/* <TableCell>Max Uses</TableCell> */}
                                 <TableCell>Show as Card</TableCell>
                                 <TableCell>Active</TableCell>
-                                <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -356,7 +355,7 @@ const CouponPage = () => {
                                     </TableCell>
                                     <TableCell>{format(new Date(coupon.validFrom), 'yyyy-MM-dd')}</TableCell>
                                     <TableCell>{format(new Date(coupon.validUntil), 'yyyy-MM-dd')}</TableCell>
-                                    <TableCell>{coupon.maxUses}</TableCell>
+                                    {/* <TableCell>{coupon.maxUses}</TableCell> */}
                                     <TableCell>
                                         <Checkbox checked={coupon.showAsCard} disabled />
                                     </TableCell>
