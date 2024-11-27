@@ -13,8 +13,8 @@ const jost = Jost({
   display: 'swap', // Fallback to default fonts while loading
 });
 export const metadata = {
-  title: "Maddy Custom Admin Dashboard",
-  description: "Effortlessly manage products, orders, and store settings with Maddy Custom Admin Dashboard.",
+  title: "Admin Dashboard | Maddy Custom",
+  description: "Uniqueness isn't an option, it's a necessity.",
 };
 
 export default function RootLayout({ children }) {
