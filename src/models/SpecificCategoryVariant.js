@@ -9,6 +9,8 @@ const SpecificCategoryVariantSchema = new mongoose.Schema(
       required: true,
       maxlength: 100,
       trim: true,
+      index: true,
+      unique: true,
     },
     variantType: {
       type: String,
@@ -22,11 +24,11 @@ const SpecificCategoryVariantSchema = new mongoose.Schema(
       maxlength: 100,
       trim: true,
     },
-    title:{
-      type:String,
-      required:true,
-      maxlength:200,
-      trim:true
+    title: {
+      type: String,
+      required: true,
+      maxlength: 200,
+      trim: true
     },
     subtitles: [
       {
@@ -54,6 +56,7 @@ const SpecificCategoryVariantSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      index: true,
     },
     specificCategory: {
       type: mongoose.Schema.Types.ObjectId,
@@ -74,6 +77,7 @@ const SpecificCategoryVariantSchema = new mongoose.Schema(
     available: {
       type: Boolean,
       default: true,
+      index: true,
     },
     showCase: [{
       available: {
@@ -87,6 +91,7 @@ const SpecificCategoryVariantSchema = new mongoose.Schema(
     designTemplateFolderPath: {
       type: String,
       required: true,
+      index: true,
     },
     imageFolderPath: {
       type: String,
@@ -140,37 +145,22 @@ const SpecificCategoryVariantSchema = new mongoose.Schema(
       type: String,
       maxlength: 500,
     },
-    dimensions: {
-      length: {
-        type: Number,
-        default: 8,
+    packagingDetails: {
+      boxId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PackagingBox',
+        // required: true,
+        index: true,
       },
-      breadth: {
+      productWeight: {
         type: Number,
-        default: 8,
+        // required: true,
       },
-      height: {
-        type: Number,
-        default: 39,
-      },
-      weight: {
-        type: Number,
-        default: 0.08,
-      },
-      boxWeight:{
-        type: Number,
-        default:0.3
-      },
-      boxCapacity:{
-        type: Number,
-        default:4
-      },
-    },
+    }
   },
   { timestamps: true }
 );
 
 
 
-
-module.exports = mongoose.models.SpecificCategoryVariant ||  mongoose.model('SpecificCategoryVariant', SpecificCategoryVariantSchema);
+module.exports = mongoose.models.SpecificCategoryVariant || mongoose.model('SpecificCategoryVariant', SpecificCategoryVariantSchema);

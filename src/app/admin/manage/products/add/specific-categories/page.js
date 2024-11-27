@@ -42,7 +42,7 @@ const SpecificCategoriesPage = () => {
           <ListItem
           sx={{cursor: 'pointer'}}
             key={category._id}
-            onClick={() => router.push(`/admin/products/add/specific-categories/${category._id}/variants`)}
+            onClick={() => router.push(`/admin/manage/products/add/specific-categories/${category._id}/variants`)}
           >
             <ListItemText primary={category.name} />
           </ListItem>

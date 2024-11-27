@@ -17,7 +17,6 @@ export async function setRole(formData) {
     })
     return { message: res.publicMetadata }
   } catch (err) {
-    console.log(err)
     return { message: err }
   }
 }

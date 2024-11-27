@@ -8,7 +8,6 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const pathname = searchParams.get("pathname");
   const userRole = searchParams.get("role");
-  console.log(pathname,userRole)
 
   try {
     // If the user role is 'admin', allow access immediately

@@ -69,7 +69,7 @@ export async function GET(request) {
     ]);
 
     const response = imagesData.map((item) => ({
-      _id: item._id.sku,
+      sku: item._id.sku,
       specificCategoryVariant: item._id.specificCategoryVariant,
       count: item.count,
       imageUrl: item.imageUrl,

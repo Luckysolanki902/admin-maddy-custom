@@ -1,17 +1,17 @@
-import styles from '../Department.module.css';
-import Link from 'next/link';
-export default function Marketing() {
+import DepartmentHomePage from '@/components/full-page-comps/DepartmentHomePage';
+import React from 'react';
+
+export default function Production() {
+  const optionsWithLinks = [
+    { text: 'Download Templates', link: '/admin/download/download-production-templates' },
+    { text: 'Orders List', link: '/admin/manage/orders/order-list' },
+  ];
+
   return (
-    <div className={`${styles.container} ${styles.marketing}`}>
-      <h1 className={` ${styles.productiontitle}`}>Production</h1>
-      <p className={styles.subtitle}>if you cant describe what you are doing , you are not doing that</p>
-      
-      <div className={styles.buttonContainer}>
-        <Link href="" className={`${styles.actionButton} ${styles.productionButton}`}>Download Templates</Link>
-        <Link href="" className={`${styles.actionButton} ${styles.productionButton}`}>Customer List</Link>
-        <Link href="" className={`${styles.actionButton} ${styles.productionButton}`}>Add Collection</Link>
-        <p className={styles.comingSoon}>More coming soon...</p>
-      </div>
-    </div>
+    <DepartmentHomePage
+      department="Production"
+      quote="Design is not just how it looks, it is also how it works"
+      options={optionsWithLinks}
+    />
   );
 }

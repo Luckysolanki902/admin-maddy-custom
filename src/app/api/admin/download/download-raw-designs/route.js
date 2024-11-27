@@ -1,17 +1,26 @@
 // /app/api/download/download-raw-designs/route.js
+export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import Product from '@/models/Product';
 import Order from '@/models/Order';
-import SpecificCategoryVariant from '@/models/SpecificCategoryVariant'; // Ensure this model exists
-import archiver from 'archiver';
-import pLimit from 'p-limit';
+import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';
+import JSZip from 'jszip';
 import dayjs from 'dayjs';
-import { PassThrough } from 'stream';
 import jwt from 'jsonwebtoken';
+import path from 'path'; // Import path for handling file extensions
+
+const AWS = require('aws-sdk');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Initialize AWS S3
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID, // Ensure these are server-side environment variables
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
 
 // Helper function to verify JWT token
 const verifyToken = (token) => {
@@ -36,7 +45,6 @@ async function handleDownload(request, method) {
 
     let startDate, endDate;
 
-    // Extract startDate and endDate based on the request method
     if (method === 'POST') {
       const body = await request.json();
       if (!body.startDate || !body.endDate) {
@@ -79,13 +87,12 @@ async function handleDownload(request, method) {
       }
     }
 
-    // Aggregate Orders to get SKU counts, image URLs, and specificCategoryVariant
+    // Aggregate Orders to get SKU counts and designTemplate.imageUrl
     const imagesData = await Order.aggregate([
       {
         $match: {
           createdAt: { $gte: startDate, $lte: endDate },
-          'paymentDetails.amountPaidOnline': { $gt: 0 }, // Assuming paymentVerified is when amountPaidOnline > 0
-          // Add additional filters if necessary (e.g., exclude test orders)
+          'paymentDetails.amountPaidOnline': { $gt: 0 },
         },
       },
       { $unwind: '$items' },
@@ -100,7 +107,7 @@ async function handleDownload(request, method) {
       { $unwind: '$product' },
       {
         $lookup: {
-          from: 'specificcategoryvariants', // Ensure the collection name matches
+          from: 'specificcategoryvariants',
           localField: 'product.specificCategoryVariant',
           foreignField: '_id',
           as: 'specificCategoryVariant',
@@ -111,94 +118,84 @@ async function handleDownload(request, method) {
         $group: {
           _id: {
             sku: '$product.sku',
-            specificCategoryVariant: '$specificCategoryVariant.name', // Assuming 'name' field exists
+            specificCategoryVariant: '$specificCategoryVariant.name',
+            designTemplateImageUrl: '$product.designTemplate.imageUrl',
           },
           count: { $sum: '$items.quantity' },
-          imageUrl: { $first: '$product.designTemplate.imageUrl' },
         },
       },
       { $sort: { count: -1 } },
     ]);
 
     if (!imagesData || imagesData.length === 0) {
-      return NextResponse.json({ message: 'No images found for the specified date range.' }, { status: 404 });
+      return NextResponse.json(
+        { message: 'No images found for the specified date range.' },
+        { status: 404 }
+      );
     }
 
-    // Initialize archiver
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    // Initialize JSZip
+    const zip = new JSZip();
 
-    // Handle archiver errors
-    archive.on('error', (err) => {
-      console.error('Archiver error:', err);
-      throw err;
-    });
+    // Function to fetch image from S3 and add to zip
+    const fetchAndAddToZip = async (sticker) => {
+      const { sku, specificCategoryVariant, designTemplateImageUrl } = sticker._id;
+      const { count } = sticker;
 
-    // Prepare a PassThrough stream to pipe to response
-    const passThrough = new PassThrough();
+      if (!designTemplateImageUrl) {
+        console.error(`No designTemplate.imageUrl found for SKU ${sku}.`);
+        return;
+      }
 
-    // Set response headers
-    const formattedDate = dayjs().format('DD_MMM_YYYY_hh_mm_a').toLowerCase();
-    const fileName = `raw_designs_${formattedDate}.zip`;
+      const imageKey = designTemplateImageUrl; // Assuming imageUrl is the S3 key
 
-    const response = new NextResponse(passThrough, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename=${fileName}`,
-      },
-    });
+      try {
+        const params = {
+          Bucket: process.env.AWS_BUCKET,
+          Key: imageKey,
+        };
 
-    // Pipe archiver to PassThrough
-    archive.pipe(passThrough);
+        const data = await s3.getObject(params).promise();
+        const fileBuffer = data.Body;
 
-    // Set up concurrency control
-    const limit = pLimit(10); // Adjust concurrency as needed
+        // Sanitize folder and file names
+        const sanitizedSKU = sku.replace(/[/\\?%*:|"<>]/g, '-');
+        const sanitizedCategoryVariant = specificCategoryVariant.replace(/[/\\?%*:|"<>]/g, '-');
 
-    // Collect fetch promises
-    const fetchPromises = imagesData.map((sticker) =>
-      limit(async () => {
-        const { _id: identifier, count, imageUrl } = sticker;
-        const { sku, specificCategoryVariant } = identifier;
-
-        if (!imageUrl) {
-          console.error(`No imageUrl found for SKU ${sku}.`);
-          return;
-        }
-
-        const fullImageUrl = `${process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL}/${imageUrl}`;
+        // Extract file extension from imageUrl
+        const fileExtension = path.extname(imageKey) || '.jpg'; // Default to .jpg if no extension
 
         for (let i = 1; i <= count; i++) {
-          try {
-            const fetchResponse = await fetch(fullImageUrl);
-
-            if (!fetchResponse.ok) {
-              console.error(`Failed to fetch image for SKU ${sku}: ${fetchResponse.status} ${fetchResponse.statusText}`);
-              continue; // Skip this image
-            }
-
-            // Read response as arrayBuffer and convert to Buffer
-            const arrayBuffer = await fetchResponse.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-
-            // Append image to archive in specificCategoryVariant folder
-            const sanitizedSKU = sku.replace(/[/\\?%*:|"<>]/g, '-');
-            const sanitizedCategoryVariant = specificCategoryVariant.replace(/[/\\?%*:|"<>]/g, '-');
-            const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}.png`;
-
-            archive.append(buffer, { name: imagePath });
-          } catch (error) {
-            console.error(`Error fetching image for SKU ${sku}:`, error);
-          }
+          const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}${fileExtension}`;
+          zip.file(imagePath, fileBuffer);
         }
-      })
-    );
+      } catch (error) {
+        console.error(`Error fetching image for SKU ${sku}:`, error);
+        // Optionally, handle unavailable images
+      }
+    };
 
-    await Promise.all(fetchPromises);
+    // Process all images
+    await Promise.all(imagesData.map((sticker) => fetchAndAddToZip(sticker)));
 
-    // Finalize the archive
-    archive.finalize();
+    // Generate zip buffer
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
-    return response;
+    // Format dates for filename
+    const formattedStartDate = dayjs(startDate).format('MMM_DD_YYYY');
+    const formattedCurrentDateTime = dayjs().format('MMM_DD_YYYY_At_hh_mm_A');
+    const fileName = `Orders_${formattedStartDate}_downloaded_On_${formattedCurrentDateTime}.zip`;
+
+    const headers = {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename=${fileName}`,
+      'Content-Length': zipBuffer.length,
+    };
+
+    return new NextResponse(zipBuffer, {
+      status: 200,
+      headers,
+    });
   } catch (error) {
     console.error('Error creating zip:', error);
     return NextResponse.json({ message: 'Error generating zip file' }, { status: 500 });

@@ -1,7 +1,7 @@
 "use client"
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import Image from 'next/image';
-import styles from './SignIn.module.css';
+import styles from './styles/SignIn.module.css';
 
 export default function NotSignedIn() {
   return (

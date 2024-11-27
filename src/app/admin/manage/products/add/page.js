@@ -1,4 +1,4 @@
-// /app/products/add/products/page.jsx
+// /app/admin/manage/products/add/page.js
 
 'use client';
 
@@ -23,7 +23,6 @@ import {
   DialogActions,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { uploadToS3 } from '@/lib/aws';
 import slugify from 'slugify';
 import ImageUpload from '@/components/utils/ImageUpload';
 
@@ -39,7 +38,7 @@ const AddProductPage = () => {
   const [name, setName] = useState('');
   const [pageSlug, setPageSlug] = useState('');
   const [title, setTitle] = useState('');
-  const [mainTag, setMainTag] = useState(''); // Single main tag
+  const [mainTag, setMainTag] = useState('');
   const [price, setPrice] = useState(0);
   const [displayOrder, setDisplayOrder] = useState(0);
 
@@ -54,7 +53,7 @@ const AddProductPage = () => {
     freebies: { available: false, description: '', image: '' },
   });
 
-  const [uniqueMainTags, setUniqueMainTags] = useState([]); // For dropdown options
+  const [uniqueMainTags, setUniqueMainTags] = useState([]);
 
   const [productImage, setProductImage] = useState(null);
   const [productionTemplateImage, setProductionTemplateImage] = useState(null);
@@ -86,7 +85,7 @@ const AddProductPage = () => {
   const fetchSpecificCategoryData = useCallback(async () => {
     if (!variantId) {
       alert('No variant selected.');
-      router.push('/products/add/specific-categories');
+      router.push('/admin/manage/products/add/specific-categories');
       return;
     }
 
@@ -113,7 +112,9 @@ const AddProductPage = () => {
 
     try {
       // Fetch specific category variant details
-      const resVariant = await fetch(`/api/admin/manage/product/get/get-specific-category-variant/${variantId}`);
+      const resVariant = await fetch(
+        `/api/admin/manage/product/get/get-specific-category-variant/${variantId}`
+      );
       if (!resVariant.ok) {
         throw new Error('Failed to fetch specific category variant.');
       }
@@ -121,16 +122,24 @@ const AddProductPage = () => {
       setSpecificCategoryVariant(variantData);
 
       // Fetch specific category details
-      const resCategory = await fetch(`/api/admin/manage/product/get/get-specific-category/${variantData.specificCategory}`);
+      const resCategory = await fetch(
+        `/api/admin/manage/product/get/get-specific-category/${variantData.specificCategory}`
+      );
       if (!resCategory.ok) {
         throw new Error('Failed to fetch specific category.');
       }
       const categoryData = await resCategory.json();
       setSpecificCategory(categoryData);
+
+      // Update hidden fields with category and subCategory
+      setHiddenFields((prevFields) => ({
+        ...prevFields,
+        category: categoryData.category,
+        subCategory: categoryData.subCategory,
+      }));
     } catch (err) {
       console.error('Error fetching variant or category:', err.message);
       alert('Error fetching variant or category details.');
-      router.push('/products/add/specific-categories');
     }
   }, [variantId, router]);
 
@@ -138,18 +147,20 @@ const AddProductPage = () => {
   const fetchLatestProduct = useCallback(async () => {
     if (specificCategoryVariant) {
       try {
-        const res = await fetch(`/api/admin/manage/product/get/get-reference?variantCode=${specificCategoryVariant.variantCode}`);
-        const latestProduct = await res.json();
-
+        const res = await fetch(
+          `/api/admin/manage/product/get/get-reference?variantCode=${specificCategoryVariant.variantCode}`
+        );
         if (!res.ok) {
-          throw new Error(latestProduct.error || 'Failed to fetch reference product.');
+          // If no reference product is found, set SKU serial to 1 and return
+          setSkuSerial(1);
+          return;
         }
 
-        console.log('Latest Product:', latestProduct); // Debugging line
+        const latestProduct = await res.json();
 
         // Prefill fields based on the latest product
         setPrice(latestProduct.price || 0);
-        setMainTag(latestProduct.mainTags?.[0] || ''); // Assuming mainTags is an array
+        setMainTag(latestProduct.mainTags?.[0] || '');
         setDisplayOrder(latestProduct.displayOrder || 0);
 
         // Update hidden fields
@@ -170,7 +181,7 @@ const AddProductPage = () => {
 
         // Determine the next serial number for SKU
         const serial = parseInt(
-          latestProduct.sku.replace(specificCategoryVariant.variantCode, ''), // Extract numeric part
+          latestProduct.sku.replace(specificCategoryVariant.variantCode, ''),
           10
         );
         setSkuSerial(isNaN(serial) ? 1 : serial + 1);
@@ -200,7 +211,9 @@ const AddProductPage = () => {
   useEffect(() => {
     if (specificCategory && name && specificCategoryVariant) {
       const constructedTitle = `${name} ${
-        specificCategory.name.endsWith('s') ? specificCategory.name.slice(0, -1) : specificCategory.name
+        specificCategory.name.endsWith('s')
+          ? specificCategory.name.slice(0, -1)
+          : specificCategory.name
       }`;
       setTitle(constructedTitle);
 
@@ -221,59 +234,84 @@ const AddProductPage = () => {
     try {
       // Construct SKU
       const sku = `${specificCategoryVariant.variantCode}${skuSerial}`;
-      console.log('Constructed SKU:', sku); // Debugging line
 
       // Construct Image Path
       const imagePath = `products/${hiddenFields.category
         .toLowerCase()
         .replace(/\s+/g, '-')}/${hiddenFields.subCategory
         .toLowerCase()
-        .replace(/\s+/g, '-')}/${hiddenFields.category
+        .replace(/\s+/g, '-')}/${specificCategory.name
         .toLowerCase()
         .replace(/\s+/g, '-')}/${specificCategoryVariant.variantCode
         .toLowerCase()
         .replace(/\s+/g, '-')}/${sku}.jpg`;
-      console.log('Image Path:', imagePath); // Debugging line
 
       // Construct Design Template Path
       const designTemplatePath = `${specificCategoryVariant.designTemplateFolderPath}/${sku}.png`;
-      console.log('Design Template Path:', designTemplatePath); // Debugging line
 
-      // Upload product image
-      const uploadedProductImagePath = await uploadToS3(productImage, imagePath, 'image/jpeg');
-      console.log('Uploaded Product Image Path:', uploadedProductImagePath); // Debugging line
+      // Use API endpoint to upload images
+      const uploadImage = async (file, fullPath, fileType) => {
+        const base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = (error) => reject(error);
+        });
 
-      // Upload production template image
-      const uploadedDesignTemplatePath = await uploadToS3(
+        const res = await fetch('/api/admin/aws/upload-to-s3', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            file: base64Data,
+            fullPath,
+            fileType,
+          }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to upload image');
+        }
+
+        const { path } = await res.json();
+        return path;
+      };
+
+      const uploadedProductImagePath = await uploadImage(
+        productImage,
+        imagePath,
+        'image/jpeg'
+      );
+
+      const uploadedDesignTemplatePath = await uploadImage(
         productionTemplateImage,
         designTemplatePath,
         'image/png'
       );
-      console.log('Uploaded Design Template Path:', uploadedDesignTemplatePath); // Debugging line
 
       // Construct Design Template Object
       const designTemplateObj = {
         designCode: sku,
         imageUrl: `${uploadedDesignTemplatePath}`,
       };
-      console.log('Design Template Object:', designTemplateObj); // Debugging line
 
       // Prepare dynamic fields based on reference product
       const productData = {
         name,
         pageSlug,
         title,
-        mainTags: [mainTag], // Convert to array as per schema
+        mainTags: [mainTag],
         price,
         displayOrder,
         specificCategory: specificCategory._id,
         specificCategoryVariant: specificCategoryVariant._id,
-        ...hiddenFields, // Add hidden fields directly
+        ...hiddenFields,
         sku,
         designTemplate: designTemplateObj,
         images: [`${uploadedProductImagePath}`],
       };
-      console.log('Product Data to Send:', productData); // Debugging line
 
       // Send data to API
       const res = await fetch('/api/admin/manage/product/add', {
@@ -307,8 +345,6 @@ const AddProductPage = () => {
 
         // Re-fetch the latest product to update SKU serial and other fields
         await fetchLatestProduct();
-
-        // Optionally, you can refresh uniqueMainTags if new tags are added elsewhere
       } else {
         const errorText = await res.json();
         setErrorAlert(errorText.error || 'Error adding product');

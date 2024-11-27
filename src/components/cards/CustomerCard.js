@@ -80,7 +80,6 @@ const CustomerCard = ({ order, expanded, handleChange }) => {
     event.stopPropagation();
     navigator.clipboard.writeText(order._id)
       .then(() => {
-        console.log('Order ID copied to clipboard');
       })
       .catch((err) => {
         console.error('Failed to copy Order ID: ', err);

@@ -18,7 +18,6 @@ import {
   Checkbox,
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
-import { uploadToS3 } from '@/lib/aws';
 import AllHappyCustomers from '@/components/prod-site-ui-comps/sliders/AllHappyCustomers';
 
 const HappyCustomersPage = () => {
@@ -63,9 +62,33 @@ const HappyCustomersPage = () => {
     const fullPath = `assets/happy-customers/${randomPath}.png`;
 
     try {
-      const relativePath = await uploadToS3(photoFile, fullPath, photoFile.type);
-      const baseUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_BASEURL;
-      return `${relativePath}`;
+      // Convert file to base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(photoFile);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = (error) => reject(error);
+      });
+
+      const response = await fetch('/api/admin/aws/upload-to-s3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file: base64,
+          fullPath,
+          fileType: photoFile.type,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
+      const data = await response.json();
+      return data.path;
     } catch (error) {
       console.error('Error uploading photo:', error.message);
       throw new Error('Photo upload failed');
@@ -105,10 +128,12 @@ const HappyCustomersPage = () => {
         setGlobalOptions({ isGlobal: false, globalDisplayOrder: 0 });
         setShowOnHomepage(false);
       } else {
-        alert('Error adding happy customer');
+        const errorData = await res.json();
+        alert(`Error adding happy customer: ${errorData.message || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Error in submission:', err.message);
+      alert(`Submission failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -116,14 +141,15 @@ const HappyCustomersPage = () => {
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
-      'image/jpeg': ['.png'], // Only allow .jpg files
+      'image/jpeg': ['.jpeg', '.jpg'],
+      'image/png': ['.png'],
     },
     maxFiles: 1,
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
         setPhotoFile(acceptedFiles[0]);
       } else {
-        alert('Only .jpg files are allowed!');
+        alert('Only .jpeg, .jpg, and .png files are allowed!');
       }
     },
   });
@@ -134,8 +160,6 @@ const HappyCustomersPage = () => {
         Manage Happy Customers
       </Typography>
       {/* <HappyCustomers /> */}
-
-
 
       <TextField
         label="Customer Name"

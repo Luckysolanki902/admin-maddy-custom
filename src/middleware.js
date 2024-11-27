@@ -5,12 +5,10 @@ const isProtectedRoute = createRouteMatcher(['/admin(.*)','/api/admin(.*)' ]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { nextUrl } = req;
-  // console.log(req)
   const currentPath = nextUrl.pathname;
-  const domainName = process.env.NEXT_PUBLIC_DOMAIN || 'http://localhost:3000';
+  const domainName = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   if (isProtectedRoute(req)) {
     const { sessionClaims } = await auth();
-    // console.log(auth)
 
     let userRole = sessionClaims?.metadata?.role;
     
