@@ -154,22 +154,24 @@ const CouponPage = () => {
     };
 
     const handleDeleteCoupon = async (id) => {
-        if (confirm('Are you sure you want to delete this coupon?')) {
-            try {
-                const res = await fetch(`/api/admin/get-main/get-all-coupon/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    setSnackbarMessage('Coupon deleted successfully!');
-                    fetchCoupons();
-                } else {
-                    const errorData = await res.json();
-                    throw new Error(errorData.message || 'Error deleting coupon.');
-                }
-            } catch (error) {
-                console.error('Delete Coupon Error:', error);
-                setSnackbarMessage(`Error: ${error.message}`);
+    if (confirm('Are you sure you want to delete this coupon?')) {
+        try {
+            const res = await fetch(`/api/admin/get-main/delete-coupon/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                setSnackbarMessage('Coupon deleted successfully!');
+                fetchCoupons();
+            } else {
+                const errorData = await res.json();
+                console.log(errorData);
+                setSnackbarMessage(`Error: ${errorData.error || 'Failed to delete coupon.'}`);
             }
+        } catch (error) {
+            console.error('Delete Coupon Error:', error);
+            setSnackbarMessage(`Error: ${error.message}`);
         }
-    };
+    }
+};
+
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
