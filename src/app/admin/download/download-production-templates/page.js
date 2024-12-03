@@ -1,8 +1,8 @@
-// /app/admin/images/page.jsx
+// /app/admin/download/download-production-templates/page.jsx
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Table,
@@ -20,16 +20,20 @@ import {
   Grid,
   Tooltip,
   Snackbar,
+  IconButton,
 } from '@mui/material';
 import {
   Download as DownloadIcon,
   ContentCopy as ContentCopyIcon,
   ImageNotSupported as ImageNotSupportedIcon, // Fallback icon
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import Image from 'next/image';
 
-const ImagesPage = () => {
+const DownloadProductionTemplates = () => {
   const [selectedDateTag, setSelectedDateTag] = useState('today');
   const [customDate, setCustomDate] = useState('');
   const [startDate, setStartDate] = useState(dayjs().startOf('day').toISOString());
@@ -78,21 +82,36 @@ const ImagesPage = () => {
     }
   }, [selectedDateTag, customDate]);
 
-  // Function to fetch images data
-  const fetchImagesData = async () => {
+  // Function to fetch images data with presigned URLs
+  const fetchImagesData = useCallback(async () => {
     setLoading(true);
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(
-        `/api/admin/get-main/get-sku-count?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
-      );
+      // Generate a download token
+      const tokenRes = await fetch('/api/admin/aws/generate-download-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate, endDate }),
+      });
+
+      if (!tokenRes.ok) {
+        const errorData = await tokenRes.json();
+        throw new Error(errorData.message || 'Failed to generate download token.');
+      }
+
+      const { token } = await tokenRes.json();
+
+      // Fetch images with presigned URLs using the token
+      const res = await fetch(`/api/admin/aws/get-presigned-urls?token=${encodeURIComponent(token)}`);
+
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || 'Error fetching data.');
+        throw new Error(errorData.message || 'Error fetching images data.');
       }
+
       const data = await res.json();
-      setImagesData(data);
+      setImagesData(data.images);
       setUnavailableImages(new Set()); // Reset unavailable images on new fetch
     } catch (error) {
       console.error('Error fetching images:', error);
@@ -100,13 +119,13 @@ const ImagesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     fetchImagesData();
-  }, [startDate, endDate]);
+  }, [fetchImagesData]);
 
-  // Function to handle image download via POST
+  // Function to handle image download via client-side zipping
   const handleDownload = async () => {
     if (imagesData.length === 0) {
       setError('No available images to download.');
@@ -120,34 +139,57 @@ const ImagesPage = () => {
     const startTime = performance.now(); // Start timing
 
     try {
-      const res = await fetch('/api/admin/download/download-raw-designs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate }),
-      });
+      const zip = new JSZip();
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to download zip.');
-      }
+      // Function to fetch each image and add to zip
+      const fetchAndAddToZip = async (image) => {
+        const { sku, specificCategoryVariant, presignedUrl, imageUrl, count } = image;
 
-      // Extract filename from Content-Disposition header
-      const contentDisposition = res.headers.get('Content-Disposition');
-      let fileName = 'download.zip'; // Default filename
-      if (contentDisposition && contentDisposition.includes('filename=')) {
-        fileName = contentDisposition
-          .split('filename=')[1]
-          .replace(/['"]/g, '');
-      }
+        if (!presignedUrl) {
+          console.error(`No presigned URL for SKU ${sku}.`);
+          setUnavailableImages((prev) => new Set(prev).add(sku));
+          return;
+        }
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
+        try {
+          const response = await fetch(presignedUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image for SKU ${sku}`);
+          }
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+
+          // Sanitize folder and file names
+          const sanitizedSKU = sku.replace(/[/\\?%*:|"<>]/g, '-');
+          const sanitizedCategoryVariant = specificCategoryVariant.replace(/[/\\?%*:|"<>]/g, '-');
+
+          // Extract file extension from imageUrl using regex
+          const fileExtensionMatch = imageUrl.match(/\.(jpg|jpeg|png|gif|bmp|svg)$/i);
+          const fileExtension = fileExtensionMatch ? fileExtensionMatch[0] : '.jpg';
+
+          for (let i = 1; i <= count; i++) {
+            const imagePath = `${sanitizedCategoryVariant}/${sanitizedSKU}-${i}${fileExtension}`;
+            zip.file(imagePath, arrayBuffer, { binary: true });
+          }
+        } catch (error) {
+          console.error(`Error fetching image for SKU ${sku}:`, error);
+          setUnavailableImages((prev) => new Set(prev).add(sku));
+        }
+      };
+
+      // Fetch and add all images to zip
+      await Promise.all(imagesData.map((image) => fetchAndAddToZip(image)));
+
+      // Generate zip blob
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+
+      // Create a filename with current date and time
+      const formattedStartDate = dayjs(startDate).format('MMM_DD_YYYY');
+      const formattedCurrentDateTime = dayjs().format('MMM_DD_YYYY_At_hh_mm_A');
+      const fileName = `Orders_${formattedStartDate}_downloaded_On_${formattedCurrentDateTime}.zip`;
+
+      // Trigger download
+      saveAs(zipBlob, fileName);
 
       const endTime = performance.now(); // End timing
       const timeTaken = ((endTime - startTime) / 1000).toFixed(2); // Time in seconds with 2 decimal places
@@ -164,8 +206,8 @@ const ImagesPage = () => {
   // Function to handle copying download link to clipboard
   const handleCopyDownloadLink = async () => {
     try {
-      // Generate JWT token with startDate and endDate
-      const tokenRes = await fetch('/api/authentication/tokens/generate-download-token', {
+      // Generate a download token
+      const tokenRes = await fetch('/api/admin/aws/generate-download-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate, endDate }),
@@ -307,9 +349,8 @@ const ImagesPage = () => {
           </Grid>
 
           {/* Copy Download Link Button */}
-          <Grid item xs={12} sm={4}>
+          {/* <Grid item xs={12} sm={4}>
             <Tooltip title="Copy the download link to clipboard">
-              {/* Wrap the Button in a span to fix MUI Tooltip issue when disabled */}
               <span style={{ display: 'inline-block', width: '100%' }}>
                 <Button
                   variant="contained"
@@ -319,13 +360,13 @@ const ImagesPage = () => {
                   disabled={imagesData.length === 0}
                   fullWidth
                   size="large"
-                  style={{ pointerEvents: 'auto' }} // Ensure tooltip works
+                  style={{ pointerEvents: 'auto' }} 
                 >
                   Copy Download Link
                 </Button>
               </span>
             </Tooltip>
-          </Grid>
+          </Grid> */}
         </Grid>
       </Paper>
 
@@ -367,9 +408,9 @@ const ImagesPage = () => {
                     <TableCell align="right">{item.count}</TableCell>
                     <TableCell align="left">{item.specificCategoryVariant}</TableCell>
                     <TableCell align="center">
-                      {item.imageUrl && !unavailableImages.has(item.sku) ? (
+                      {item.presignedUrl && !unavailableImages.has(item.sku) ? (
                         <Image
-                          src={`${CLOUDFRONT_BASEURL}/${item.imageUrl}`}
+                          src={item.presignedUrl}
                           width={50}
                           height={50}
                           style={{ width: '50px', height: 'auto' }}
@@ -405,9 +446,18 @@ const ImagesPage = () => {
         onClose={handleSnackbarClose}
         message="Download link copied to clipboard!"
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        action={
+          <IconButton
+            size="small"
+            color="inherit"
+            onClick={handleSnackbarClose}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
       />
     </Container>
   );
 };
 
-export default ImagesPage;
+export default DownloadProductionTemplates;

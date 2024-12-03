@@ -1,3 +1,5 @@
+// app/admin/manage/products/add/page.jsx
+
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -247,52 +249,58 @@ const AddProductPage = () => {
       // Construct Design Template Path
       const designTemplatePath = `${specificCategoryVariant.designTemplateFolderPath}/${sku}.png`;
 
-      // Use API endpoint to upload images
-      const uploadImage = async (file, fullPath, fileType) => {
-        const base64Data = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result.split(',')[1]);
-          reader.onerror = (error) => reject(error);
-        });
-
-        const res = await fetch('/api/admin/aws/upload-to-s3', {
+      // Function to get presigned URL
+      const getPresignedUrl = async (fullPath, fileType) => {
+        const res = await fetch('/api/admin/aws/generate-presigned-url', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            file: base64Data,
-            fullPath,
-            fileType,
-          }),
+          body: JSON.stringify({ fullPath, fileType }),
         });
 
         if (!res.ok) {
           const errorData = await res.json();
-          throw new Error(errorData.message || 'Failed to upload image');
+          throw new Error(errorData.message || 'Failed to get presigned URL');
         }
 
-        const { path } = await res.json();
-        return path;
+        const data = await res.json();
+        return data;
       };
 
-      const uploadedProductImagePath = await uploadImage(
-        productImage,
-        imagePath,
-        'image/jpeg'
-      );
+      // Function to upload file to S3 using presigned URL
+      const uploadFileToS3 = async (file, presignedUrl) => {
+        const response = await fetch(presignedUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type,
+          },
+          body: file,
+        });
 
-      const uploadedDesignTemplatePath = await uploadImage(
-        productionTemplateImage,
-        designTemplatePath,
-        'image/png'
-      );
+        if (!response.ok) {
+          throw new Error('Failed to upload file to S3');
+        }
+      };
+
+      // Get presigned URLs for both images
+      const {
+        presignedUrl: productPresignedUrl,
+        url: productImageUrl,
+      } = await getPresignedUrl(imagePath, productImage.type);
+      const {
+        presignedUrl: templatePresignedUrl,
+        url: designTemplateUrl,
+      } = await getPresignedUrl(designTemplatePath, productionTemplateImage.type);
+
+      // Upload both images to S3
+      await uploadFileToS3(productImage, productPresignedUrl);
+      await uploadFileToS3(productionTemplateImage, templatePresignedUrl);
 
       // Construct Design Template Object
       const designTemplateObj = {
         designCode: sku,
-        imageUrl: `${uploadedDesignTemplatePath}`,
+        imageUrl: designTemplateUrl,
       };
 
       // Prepare dynamic fields based on reference product
@@ -308,7 +316,7 @@ const AddProductPage = () => {
         ...hiddenFields,
         sku,
         designTemplate: designTemplateObj,
-        images: [`${uploadedProductImagePath}`],
+        images: [`${productImageUrl}`],
       };
 
       // Send data to API

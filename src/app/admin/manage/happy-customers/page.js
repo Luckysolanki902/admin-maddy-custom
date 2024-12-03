@@ -1,6 +1,8 @@
+// app/admin/manage/happycustomers/page.jsx
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Chip,
@@ -16,7 +18,9 @@ import {
   Typography,
   FormControlLabel,
   Checkbox,
+  IconButton,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useDropzone } from 'react-dropzone';
 import AllHappyCustomers from '@/components/prod-site-ui-comps/sliders/AllHappyCustomers';
 
@@ -33,6 +37,7 @@ const HappyCustomersPage = () => {
   const [showOnHomepage, setShowOnHomepage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successAlert, setSuccessAlert] = useState(false);
+  const [errorAlert, setErrorAlert] = useState('');
 
   useEffect(() => {
     // Fetch specific categories
@@ -44,7 +49,9 @@ const HappyCustomersPage = () => {
 
   const handleChipToggle = (categoryId) => {
     setSelectedCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
     );
   };
 
@@ -55,64 +62,76 @@ const HappyCustomersPage = () => {
     }));
   };
 
-  const handlePhotoUpload = async () => {
+  // Function to upload photo using presigned URL
+  const handlePhotoUpload = useCallback(async () => {
     if (!photoFile) return null;
 
     const randomPath = Math.random().toString(36).substring(2, 15);
     const fullPath = `assets/happy-customers/${randomPath}.png`;
 
     try {
-      // Convert file to base64
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(photoFile);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = (error) => reject(error);
-      });
-
-      const response = await fetch('/api/admin/aws/upload-to-s3', {
+      // Request presigned URL from the server
+      const res = await fetch('/api/admin/aws/generate-presigned-url', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          file: base64,
           fullPath,
           fileType: photoFile.type,
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Upload failed');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to get presigned URL');
       }
 
-      const data = await response.json();
-      return data.path;
+      const { presignedUrl, url } = await res.json();
+
+      // Upload the file directly to S3 using the presigned URL
+      const uploadRes = await fetch(presignedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': photoFile.type,
+        },
+        body: photoFile,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload photo to S3');
+      }
+
+      return url;
     } catch (error) {
       console.error('Error uploading photo:', error.message);
       throw new Error('Photo upload failed');
     }
-  };
+  }, [photoFile]);
 
   const handleFormSubmit = async () => {
     setLoading(true);
+    setErrorAlert('');
 
     try {
+      // Upload photo and get the S3 URL
       const photoUrl = await handlePhotoUpload();
+
+      // Prepare the data to send to the backend
       const data = {
         name,
         photo: photoUrl,
         isGlobal: globalOptions.isGlobal,
-        globalDisplayOrder: globalOptions.globalDisplayOrder,
+        globalDisplayOrder: parseInt(globalOptions.globalDisplayOrder, 10) || 0,
         showOnHomepage,
         placements: selectedCategories.map((categoryId) => ({
           refType: 'SpecificCategory',
           refId: categoryId,
-          displayOrder: displayOrder[categoryId] || 0,
+          displayOrder: parseInt(displayOrder[categoryId], 10) || 0,
         })),
       };
 
+      // Send the data to the backend
       const res = await fetch('/api/admin/manage/happycustomers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,6 +140,7 @@ const HappyCustomersPage = () => {
 
       if (res.ok) {
         setSuccessAlert(true);
+        // Reset form fields
         setName('');
         setPhotoFile(null);
         setSelectedCategories([]);
@@ -129,11 +149,11 @@ const HappyCustomersPage = () => {
         setShowOnHomepage(false);
       } else {
         const errorData = await res.json();
-        alert(`Error adding happy customer: ${errorData.message || 'Unknown error'}`);
+        throw new Error(errorData.message || 'Unknown error');
       }
     } catch (err) {
       console.error('Error in submission:', err.message);
-      alert(`Submission failed: ${err.message}`);
+      setErrorAlert(`Submission failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -159,7 +179,6 @@ const HappyCustomersPage = () => {
       <Typography variant="h3" gutterBottom>
         Manage Happy Customers
       </Typography>
-      {/* <HappyCustomers /> */}
 
       <TextField
         label="Customer Name"
@@ -181,7 +200,11 @@ const HappyCustomersPage = () => {
         }}
       >
         <input {...getInputProps()} />
-        {!photoFile ? <p>Drag & drop a photo here, or click to select</p> : <p>{photoFile.name}</p>}
+        {!photoFile ? (
+          <p>Drag & drop a photo here, or click to select</p>
+        ) : (
+          <p>{photoFile.name}</p>
+        )}
       </Box>
 
       <Box mb={4}>
@@ -214,6 +237,7 @@ const HappyCustomersPage = () => {
                     type="number"
                     value={displayOrder[categoryId] || ''}
                     onChange={(e) => handleDisplayOrderChange(categoryId, e.target.value)}
+                    inputProps={{ min: 0 }}
                   />
                 </TableCell>
               </TableRow>
@@ -221,17 +245,6 @@ const HappyCustomersPage = () => {
           })}
         </TableBody>
       </Table>
-
-      <TextField
-        label="Global Display Order"
-        type="number"
-        value={globalOptions.globalDisplayOrder}
-        onChange={(e) =>
-          setGlobalOptions({ ...globalOptions, globalDisplayOrder: e.target.value })
-        }
-        fullWidth
-        sx={{ mt: 4 }}
-      />
 
       <Box mt={4} display="flex" alignItems="center" gap={2}>
         <FormControlLabel
@@ -245,6 +258,17 @@ const HappyCustomersPage = () => {
           }
           label="Is Global"
         />
+        {globalOptions.isGlobal && (
+          <TextField
+            label="Global Display Order"
+            type="number"
+            value={globalOptions.globalDisplayOrder}
+            onChange={(e) =>
+              setGlobalOptions({ ...globalOptions, globalDisplayOrder: e.target.value })
+            }
+            inputProps={{ min: 0 }}
+          />
+        )}
         <FormControlLabel
           control={
             <Checkbox
@@ -256,22 +280,52 @@ const HappyCustomersPage = () => {
         />
       </Box>
 
-      <Button
-        onClick={handleFormSubmit}
-        variant="contained"
-        color="primary"
-        disabled={loading || !photoFile || !name}
-        sx={{ mt: 4 }}
-      >
-        {loading ? <CircularProgress size={24} /> : 'Save Happy Customer'}
-      </Button>
+      <Box mt={4} textAlign="center">
+        <Button
+          onClick={handleFormSubmit}
+          variant="contained"
+          color="primary"
+          disabled={loading || !photoFile || !name || selectedCategories.length === 0}
+          startIcon={loading && <CircularProgress size={24} />}
+        >
+          {loading ? 'Saving...' : 'Save Happy Customer'}
+        </Button>
+      </Box>
+
       <AllHappyCustomers />
 
+      {/* Success Snackbar */}
       <Snackbar
         open={successAlert}
         autoHideDuration={3000}
         onClose={() => setSuccessAlert(false)}
         message="Happy customer added successfully!"
+        action={
+          <IconButton
+            size="small"
+            color="inherit"
+            onClick={() => setSuccessAlert(false)}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
+      />
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={!!errorAlert}
+        autoHideDuration={6000}
+        onClose={() => setErrorAlert('')}
+        message={errorAlert}
+        action={
+          <IconButton
+            size="small"
+            color="inherit"
+            onClick={() => setErrorAlert('')}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
       />
     </Box>
   );
