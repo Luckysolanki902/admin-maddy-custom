@@ -154,7 +154,6 @@ async function handleGetPresignedUrls(request) {
         }
       })
     );
-
     return NextResponse.json({ images: imagesWithPresignedUrls }, { status: 200 });
   } catch (error) {
     console.error('Error in get-presigned-urls:', error);

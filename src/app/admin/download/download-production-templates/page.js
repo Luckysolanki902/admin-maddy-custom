@@ -104,13 +104,14 @@ const DownloadProductionTemplates = () => {
 
       // Fetch images with presigned URLs using the token
       const res = await fetch(`/api/admin/aws/get-presigned-urls?token=${encodeURIComponent(token)}`);
-
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Error fetching images data.');
       }
 
       const data = await res.json();
+      console.log({res, data})
+      console.log(data.images)
       setImagesData(data.images);
       setUnavailableImages(new Set()); // Reset unavailable images on new fetch
     } catch (error) {
