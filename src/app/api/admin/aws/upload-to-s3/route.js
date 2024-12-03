@@ -2,13 +2,6 @@
 import { uploadToS3 } from '@/lib/aws';
 import { NextResponse } from 'next/server';
 
-export const config = {
-    api: {
-        bodyParser: {
-            sizeLimit: '100mb', // Adjust as needed
-        },
-    },
-};
 
 
 export async function POST(request) {
