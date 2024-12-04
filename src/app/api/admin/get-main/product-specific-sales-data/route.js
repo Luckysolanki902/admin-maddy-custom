@@ -5,7 +5,7 @@ import Order from '@/models/Order';
 import Product from '@/models/Product';
 import SpecificCategoryVariant from '@/models/SpecificCategoryVariant';
 import { NextResponse } from 'next/server';
-import { Types } from 'mongoose'; // Correctly import Types
+import { Types } from 'mongoose';
 
 /**
  * Helper function to calculate date range based on filter
@@ -47,8 +47,9 @@ export const GET = async (request) => {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const dateFilter = searchParams.get('dateFilter') || 'allTime';
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'; // Default to 'desc'
+    const limit = parseInt(searchParams.get('limit'), 10) || 20; // Default to 20
     const categoryVariantIds = searchParams.getAll('categoryVariants'); // Array of SpecificCategoryVariant IDs
-
 
     // Get date range
     const { startDate, endDate } = getDateRange(dateFilter);
@@ -59,16 +60,17 @@ export const GET = async (request) => {
       createdAt: { $gte: startDate, $lte: endDate },
     };
 
-
     // Convert categoryVariantIds to ObjectId and filter out any invalid IDs
     const validCategoryVariantIds = categoryVariantIds
       .map(id => Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : null)
       .filter(id => id !== null);
 
-
     if (categoryVariantIds.length > 0 && validCategoryVariantIds.length === 0) {
       console.warn('No valid categoryVariantIds provided.');
     }
+
+    // Determine sort direction
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
 
     // Aggregate sales data
     const salesData = await Order.aggregate([
@@ -103,20 +105,19 @@ export const GET = async (request) => {
           totalSales: { $sum: { $multiply: ["$items.quantity", "$items.priceAtPurchase"] } },
         }
       },
-      { $sort: { totalSold: -1 } },
+      { $sort: { totalSold: sortDirection } },
       {
         $facet: {
-          top20: [{ $limit: 20 }],
+          top: [{ $limit: limit }],
           all: []
         }
       }
     ]);
 
-
-    const top20 = salesData[0].top20;
+    const top = salesData[0].top;
     const allProducts = salesData[0].all;
 
-    return NextResponse.json({ top20, allProducts });
+    return NextResponse.json({ top, allProducts });
   } catch (error) {
     console.error("Error fetching sales data:", error);
     return NextResponse.json({ error: 'Failed to fetch sales data' }, { status: 500 });

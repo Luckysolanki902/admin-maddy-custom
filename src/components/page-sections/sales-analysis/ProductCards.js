@@ -43,7 +43,13 @@ const ProductCards = ({ data }) => {
                 gutterBottom
                 variant="h6"
                 component="div"
-                sx={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+                sx={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical'
+                }}
               >
                 {product.name}
               </Typography>
@@ -54,8 +60,11 @@ const ProductCards = ({ data }) => {
                 Sold: {product.totalSold}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Sku: {product.sku}
+                SKU: {product.sku}
               </Typography>
+              {/* <Typography variant="body2" color="text.secondary">
+                Total Sales: ₹{product.totalSales.toLocaleString()}
+              </Typography> */}
             </CardContent>
             {/* <CardActions>
               <Button size="small" variant="contained" color="primary">

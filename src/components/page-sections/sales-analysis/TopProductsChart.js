@@ -14,6 +14,7 @@ import { Typography, Box, useTheme } from '@mui/material';
 import { styled } from '@mui/system';
 import Image from 'next/image';
 
+
 // Custom Scrollable Container with hidden vertical scrollbar and styled horizontal scrollbar
 const ScrollableContainer = styled(Box)(({ theme }) => ({
   overflowX: 'auto',
@@ -53,8 +54,8 @@ const CustomTooltip = ({ active, payload }) => {
         }}
       >
         <Image
-          width={250}
-          height={250}
+          width={50}
+          height={50}
           src={`${baseCloudfrontUrl}${product.image}` || '/placeholder.png'}
           alt={product.name}
           style={{
@@ -66,12 +67,12 @@ const CustomTooltip = ({ active, payload }) => {
           }}
         />
         <Box>
-          <Typography variant="subtitle2">{product.sku}</Typography>
-          {/* Correctly render the total sold */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent:'space-between' }}>
-
-          </Box>
-          <Typography variant="body2">Sold: {product.sales}</Typography>
+          <Typography variant="subtitle2">{product.name}</Typography>
+          <Typography variant="body2">SKU: {product.sku}</Typography>
+          <Typography variant="body2">Sold: {product.totalSold}</Typography>
+          <Typography variant="body2">
+            Total Sales: ₹{product.totalSales.toLocaleString()}
+          </Typography>
         </Box>
       </Box>
     );
@@ -80,7 +81,7 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-const TopProductsChart = ({ data }) => {
+const TopProductsChart = ({ data, limit }) => {
   const theme = useTheme();
 
   // Prepare data for the chart
@@ -93,15 +94,15 @@ const TopProductsChart = ({ data }) => {
   }));
 
   // Calculate dynamic width based on data length
-  const dynamicWidth = Math.max(800, chartData.length * 80); // Adjust the multiplier as needed
+  const dynamicWidth = Math.max(800, chartData.length * 100); // Adjust the multiplier as needed
 
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Top 20 Products by Sales
+        {`Top ${limit} Products by Sales`}
       </Typography>
       <ScrollableContainer>
-        <ResponsiveContainer width={dynamicWidth} height={400}>
+        <ResponsiveContainer style={{ marginBottom: '-5rem' }} width={dynamicWidth} height={400}>
           <BarChart
             data={chartData}
             margin={{ top: 20, right: 30, left: 20, bottom: 150 }}
