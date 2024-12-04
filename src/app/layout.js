@@ -7,6 +7,7 @@ import TopLoadingBar from "@/lib/utils/TopLoadingBar";
 
 
 import { Jost } from 'next/font/google';
+import { Suspense } from "react";
 
 const jost = Jost({
   subsets: ['latin'], // Specify character subsets
@@ -19,6 +20,8 @@ export const metadata = {
   description: "Uniqueness isn't an option, it's a necessity.",
 };
 
+
+
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider
@@ -28,8 +31,9 @@ export default function RootLayout({ children }) {
       <html lang="en">
         <body>
           <ThemeRegistry>
-          <TopLoadingBar />
-
+            <Suspense fallback={null}>
+              <TopLoadingBar />
+            </Suspense>
             <AuthHeader />
             <main>{children}</main>
           </ThemeRegistry>
@@ -38,3 +42,4 @@ export default function RootLayout({ children }) {
     </ClerkProvider>
   );
 }
+
