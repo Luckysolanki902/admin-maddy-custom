@@ -3,6 +3,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from '@clerk/themes'
 import ThemeRegistry from "@/components/layout/ThemeRegistry";
 import AuthHeader from "@/components/layout/AuthHeader";
+import TopLoadingBar from "@/lib/utils/TopLoadingBar";
+
 
 import { Jost } from 'next/font/google';
 
@@ -26,6 +28,8 @@ export default function RootLayout({ children }) {
       <html lang="en">
         <body>
           <ThemeRegistry>
+          <TopLoadingBar />
+
             <AuthHeader />
             <main>{children}</main>
           </ThemeRegistry>
