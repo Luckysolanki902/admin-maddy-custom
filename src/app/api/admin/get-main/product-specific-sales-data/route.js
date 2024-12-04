@@ -49,7 +49,6 @@ export const GET = async (request) => {
     const dateFilter = searchParams.get('dateFilter') || 'allTime';
     const categoryVariantIds = searchParams.getAll('categoryVariants'); // Array of SpecificCategoryVariant IDs
 
-    console.log({ categoryVariantIds });
 
     // Get date range
     const { startDate, endDate } = getDateRange(dateFilter);
@@ -60,14 +59,12 @@ export const GET = async (request) => {
       createdAt: { $gte: startDate, $lte: endDate },
     };
 
-    console.log('Initial Query:', JSON.stringify(query));
 
     // Convert categoryVariantIds to ObjectId and filter out any invalid IDs
     const validCategoryVariantIds = categoryVariantIds
       .map(id => Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : null)
       .filter(id => id !== null);
 
-    console.log('Valid Category Variant ObjectIds:', validCategoryVariantIds);
 
     if (categoryVariantIds.length > 0 && validCategoryVariantIds.length === 0) {
       console.warn('No valid categoryVariantIds provided.');
@@ -115,7 +112,6 @@ export const GET = async (request) => {
       }
     ]);
 
-    console.log('Aggregated Sales Data:', JSON.stringify(salesData, null, 2));
 
     const top20 = salesData[0].top20;
     const allProducts = salesData[0].all;

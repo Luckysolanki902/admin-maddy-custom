@@ -178,7 +178,6 @@ const CouponPage = () => {
                     fetchCoupons();
                 } else {
                     const errorData = await res.json();
-                    console.log(errorData);
                     setSnackbarMessage(`Error: ${errorData.error || 'Failed to delete coupon.'}`);
                 }
             } catch (error) {

@@ -53,9 +53,9 @@ const ProductCards = ({ data }) => {
               <Typography variant="body2" color="text.secondary">
                 Sold: {product.totalSold}
               </Typography>
-              {/* <Typography variant="body2" color="text.secondary">
-                Total Sales: ₹{product.totalSales.toLocaleString()}
-              </Typography> */}
+              <Typography variant="body2" color="text.secondary">
+                Sku: {product.sku}
+              </Typography>
             </CardContent>
             {/* <CardActions>
               <Button size="small" variant="contained" color="primary">

@@ -66,8 +66,11 @@ const CustomTooltip = ({ active, payload }) => {
           }}
         />
         <Box>
-          <Typography variant="subtitle2">{product.name}</Typography>
+          <Typography variant="subtitle2">{product.sku}</Typography>
           {/* Correctly render the total sold */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent:'space-between' }}>
+
+          </Box>
           <Typography variant="body2">Sold: {product.sales}</Typography>
         </Box>
       </Box>
@@ -86,6 +89,7 @@ const TopProductsChart = ({ data }) => {
     sales: item.totalSold, // Match this key with the Bar's dataKey
     image: item.image,
     totalSales: item.totalSales,
+    sku: item.sku,
   }));
 
   // Calculate dynamic width based on data length

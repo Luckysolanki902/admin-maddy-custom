@@ -110,8 +110,6 @@ const DownloadProductionTemplates = () => {
       }
 
       const data = await res.json();
-      console.log({res, data})
-      console.log(data.images)
       setImagesData(data.images);
       setUnavailableImages(new Set()); // Reset unavailable images on new fetch
     } catch (error) {
