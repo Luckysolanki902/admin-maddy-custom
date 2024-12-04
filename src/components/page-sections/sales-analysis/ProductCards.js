@@ -51,7 +51,7 @@ const ProductCards = ({ data }) => {
                   WebkitBoxOrient: 'vertical'
                 }}
               >
-                {product.name}
+                {product.name.length < 30 ? product.name : product.name.substring(0, 20) + '...'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Price: ₹{product.price.toLocaleString()}

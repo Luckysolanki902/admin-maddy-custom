@@ -67,12 +67,12 @@ const CustomTooltip = ({ active, payload }) => {
           }}
         />
         <Box>
-          <Typography variant="subtitle2">{product.name}</Typography>
+          <Typography sx={{textTransform:'capitalize'}} variant="subtitle2">{product.name.length < 30 ? product.name : product.name.substring(0, 20) + '...'}</Typography>
           <Typography variant="body2">SKU: {product.sku}</Typography>
-          <Typography variant="body2">Sold: {product.totalSold}</Typography>
-          <Typography variant="body2">
+          <Typography variant="body2">Sold: {product.sales}</Typography>
+          {/* <Typography variant="body2">
             Total Sales: ₹{product.totalSales.toLocaleString()}
-          </Typography>
+          </Typography> */}
         </Box>
       </Box>
     );
