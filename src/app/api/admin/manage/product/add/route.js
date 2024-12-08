@@ -95,7 +95,7 @@ export async function POST(req) {
     // Create a new product
     const newProduct = new Product({
       name,
-      images,
+      images: images.map((image) => (image.startsWith('/') ? image : `/${image}`)),
       title: constructedTitle,
       mainTags,
       price,
