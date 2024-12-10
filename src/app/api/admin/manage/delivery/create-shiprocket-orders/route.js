@@ -8,14 +8,22 @@ import mongoose from 'mongoose';
 
 export async function POST(req) {
   try {
+    console.info('Received request to create Shiprocket orders.');
+
     // Parse the request body
     const { startDate, endDate } = await req.json();
+
+    console.info(`Processing Shiprocket order creation with startDate: ${startDate}, endDate: ${endDate}`);
 
     // Validate date inputs
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
 
-    if ((startDate && isNaN(start.getTime())) || (endDate && isNaN(end.getTime()))) {
+    if (
+      (startDate && isNaN(start.getTime())) ||
+      (endDate && isNaN(end.getTime()))
+    ) {
+      console.warn('Invalid date format provided.');
       return NextResponse.json(
         { message: 'Invalid date format provided.' },
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -24,6 +32,7 @@ export async function POST(req) {
 
     // Connect to the database
     await connectToDatabase();
+    console.info('Connected to the database successfully.');
 
     // Build the query based on provided filters
     const query = {
@@ -40,6 +49,8 @@ export async function POST(req) {
       query.createdAt = { $lte: end };
     }
 
+    console.info('Query constructed for fetching eligible orders:', query);
+
     // Find eligible orders
     const eligibleOrders = await Order.find(query).populate({
       path: 'items.product',
@@ -49,7 +60,10 @@ export async function POST(req) {
       },
     });
 
+    console.info(`Found ${eligibleOrders.length} eligible orders for Shiprocket processing.`);
+
     if (eligibleOrders.length === 0) {
+      console.warn('No eligible orders found for Shiprocket order creation.');
       return NextResponse.json(
         {
           message: 'No eligible orders found for Shiprocket order creation.',
@@ -67,15 +81,22 @@ export async function POST(req) {
 
     // Optional: Process orders in batches for better performance
     const BATCH_SIZE = 10;
+    console.info(`Processing orders in batches of ${BATCH_SIZE}.`);
+
     for (let i = 0; i < eligibleOrders.length; i += BATCH_SIZE) {
       const batch = eligibleOrders.slice(i, i + BATCH_SIZE);
+      console.info(`Processing batch ${i / BATCH_SIZE + 1}: ${batch.length} orders.`);
 
       await Promise.all(
         batch.map(async (order) => {
           try {
+            console.info(`Processing Order ID: ${order._id}`);
+
             // Calculate dimensions and weight
             const dimensionsAndWeight = await getDimensionsAndWeight(order.items);
             const { length, breadth, height, weight } = dimensionsAndWeight;
+
+            console.info(`Calculated dimensions and weight for Order ID: ${order._id}:`, dimensionsAndWeight);
 
             // Prepare Shiprocket order data
             const [firstName, ...lastNameParts] = order.address.receiverName.split(' ');
@@ -107,8 +128,11 @@ export async function POST(req) {
               weight: weight,
             };
 
+            console.info(`Shiprocket order data prepared for Order ID: ${order._id}:`, shiprocketOrderData);
+
             // Create Shiprocket order
             const response = await createShiprocketOrder(shiprocketOrderData);
+            console.info(`Shiprocket response for Order ID: ${order._id}:`, response);
 
             if (response.status_code === 1 && !response.packaging_box_error) {
               // Update order with Shiprocket order ID and deliveryStatus
@@ -120,12 +144,14 @@ export async function POST(req) {
                 orderId: order._id.toString(),
                 deliveryStatusResponse: 'Order Created',
               });
+              console.info(`Successfully created Shiprocket order for Order ID: ${order._id}`);
             } else if (response.status_code === 0 && response.message.includes('already exists')) {
               // Shiprocket indicates the order already exists
               details.push({
                 orderId: order._id.toString(),
                 deliveryStatusResponse: 'Already Manually Created',
               });
+              console.warn(`Shiprocket order already exists for Order ID: ${order._id}`);
             } else {
               console.error(`Failed to create Shiprocket order for Order ID: ${order._id}`, response);
               failedCount += 1;
@@ -145,6 +171,8 @@ export async function POST(req) {
         })
       );
     }
+
+    console.info(`Shiprocket order creation completed. Created: ${createdCount}, Failed: ${failedCount}`);
 
     return NextResponse.json(
       {
